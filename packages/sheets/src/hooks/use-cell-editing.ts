@@ -1,0 +1,100 @@
+'use client';
+
+import type { SheetCellValidator } from './types.js';
+import { useSheetCellScope } from '../ui/cell-context.js';
+
+/**
+ * The behaviour every editable cell shares once it is inside a Sheet: which
+ * value to display, whether a committed value is allowed, and what to do when
+ * the editor opens or is abandoned.
+ *
+ * Extracted because both editable cells had it character-for-character
+ * identical. Two copies of a validation gate is the kind of duplication that
+ * drifts silently — a fix applied to one cell simply would not reach the other,
+ * and the failure mode is a cell that saves values its column forbids.
+ *
+ * Everything degrades to a no-op outside a Sheet, where there is no scope to
+ * report to. Cells rendered standalone in tests and docs therefore behave as
+ * they did before any of this existed.
+ */
+export function useSheetCellEditing(schema?: SheetCellValidator) {
+  const scope = useSheetCellScope();
+  const cellStatus = scope?.cellStatus;
+  const rowChanges = scope?.rowChanges;
+
+  // A value the last commit was refused for. Kept on screen so the error icon
+  // has something to explain — an icon whose cause was reverted is useless.
+  const refusedValue =
+    scope && cellStatus
+      ? cellStatus.rejectedCellValue(scope.rowId, scope.columnId)
+      : undefined;
+
+  // Staged but not yet sent. Wins over both: it is the newest thing typed, and
+  // a refetch landing mid-edit must not replace it with the server's older copy.
+  const stagedValue =
+    scope && rowChanges
+      ? rowChanges.stagedCellValue(scope.rowId, scope.columnId)
+      : undefined;
+
+  /**
+   * Runs the column's rule. Reports the failure on this cell and returns false,
+   * so the caller can bail before writing or staging anything.
+   */
+  const accepts = (next: string) => {
+    if (!schema || !scope || !cellStatus) return true;
+    const result = schema.safeParse(next);
+    if (result.success) return true;
+    cellStatus.rejectCellValue(
+      scope.rowId,
+      scope.columnId,
+      result.error?.issues?.[0]?.message ?? 'Invalid value',
+      next,
+    );
+    return false;
+  };
+
+  /**
+   * The user is acting on the cell, so the icon has done its job — and it sits
+   * over the right edge, where it would cover the text being typed. The refused
+   * value stays, so a typo is fixed rather than retyped.
+   */
+  const clearOnEditStart = () => {
+    if (scope && cellStatus) {
+      cellStatus.clearCellStatus(scope.rowId, scope.columnId);
+    }
+  };
+
+  /** Escape: drop the icon, the refused value, and anything staged. */
+  const abandon = () => {
+    if (scope && rowChanges) {
+      rowChanges.discardCellValue(scope.rowId, scope.columnId);
+    }
+    if (scope && cellStatus) {
+      cellStatus.abandonCellValueChange(scope.rowId, scope.columnId);
+    }
+  };
+
+  /**
+   * Whether the Sheet submits per row. Exposed as a plain boolean rather than
+   * being folded into `stage`, so a cell can decide without awaiting: an `await`
+   * before a caller's own `onCommit` would push it past the current microtask,
+   * which changes observable ordering for anything watching that call.
+   */
+  const canStage = scope !== undefined && rowChanges !== undefined;
+
+  /** Hands the value to the row's buffer. Only valid when `canStage`. */
+  const stage = (next: string) =>
+    scope && rowChanges
+      ? rowChanges.stageCellValue(scope.rowId, scope.columnId, next)
+      : Promise.resolve();
+
+  return {
+    refusedValue,
+    stagedValue,
+    accepts,
+    clearOnEditStart,
+    abandon,
+    canStage,
+    stage,
+  };
+}
