@@ -1,3 +1,5 @@
+'use client';
+
 import {
   ArrowsUpDownIcon,
   ChevronDownIcon,
@@ -6,6 +8,7 @@ import {
 } from './icons.js';
 import { cx } from './cx.js';
 import { flexRender, type Header } from '@tanstack/react-table';
+import { useSheetLabels } from './labels.js';
 
 /** Pixels per arrow key on the resize handle; Shift moves five steps. */
 const RESIZE_STEP = 10;
@@ -21,14 +24,15 @@ export function SheetColumn<TData>({
   isFirstCol,
   className,
 }: SheetColumnProps<TData>) {
+  const labels = useSheetLabels();
   const column = header.column;
   // Group headers span their leaf columns; empty slots above a leaf column
   // that has no group (placeholders) render as blank header space.
   const span =
     header.colSpan > 1 ? { gridColumn: `span ${header.colSpan}` } : undefined;
   const borders = cx(
-    'border-r border-b border-r-zinc-950/5 border-b-zinc-950/10 dark:border-r-white/5 dark:border-b-white/10',
-    isFirstCol && 'border-l border-l-zinc-950/5 dark:border-l-white/5',
+    'border-e border-b border-e-sheet-fg/5 border-b-sheet-fg/10 dark:border-e-sheet-fg-dark/5 dark:border-b-sheet-fg-dark/10',
+    isFirstCol && 'border-s border-s-sheet-fg/5 dark:border-s-sheet-fg-dark/5',
   );
 
   if (header.isPlaceholder) {
@@ -67,7 +71,7 @@ export function SheetColumn<TData>({
               : undefined
       }
       className={cx(
-        'group relative flex items-center justify-between px-2 py-1.5 text-xs font-medium text-zinc-500 select-none dark:text-zinc-400',
+        'group relative flex items-center justify-between px-2 py-1.5 text-xs font-medium text-sheet-muted select-none dark:text-sheet-muted-dark',
         borders,
         className,
       )}
@@ -81,7 +85,7 @@ export function SheetColumn<TData>({
         {column.getIsFiltered() && (
           <>
             <FunnelIcon className="size-3" />
-            <span className="sr-only">(filtered)</span>
+            <span className="sr-only">{labels.filtered}</span>
           </>
         )}
       </div>
@@ -89,8 +93,8 @@ export function SheetColumn<TData>({
         <button
           type="button"
           onClick={column.getToggleSortingHandler()}
-          className="text-zinc-950/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-950 focus-visible:opacity-100 dark:text-white/30 dark:hover:text-white"
-          aria-label={`Sort ${label}`}
+          className="text-sheet-fg/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-sheet-fg focus-visible:opacity-100 dark:text-sheet-fg-dark/30 dark:hover:text-sheet-fg-dark"
+          aria-label={labels.sort(label)}
         >
           <ArrowsUpDownIcon className="size-3" />
         </button>
@@ -99,10 +103,10 @@ export function SheetColumn<TData>({
         <div
           role="separator"
           aria-orientation="vertical"
-          aria-label={`Resize ${label}`}
+          aria-label={labels.resize(label)}
           aria-valuenow={size}
           aria-valuemin={minSize}
-          aria-valuetext={`${size} pixels`}
+          aria-valuetext={labels.width(size)}
           tabIndex={0}
           onMouseDown={header.getResizeHandler()}
           onTouchStart={header.getResizeHandler()}
@@ -110,14 +114,20 @@ export function SheetColumn<TData>({
           onKeyDown={(event) => {
             if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
             event.preventDefault();
+            // The arrow pointing away from the column widens it, so the
+            // keys flip in right-to-left layouts.
+            const widen =
+              header.getContext().table.options.columnResizeDirection === 'rtl'
+                ? 'ArrowLeft'
+                : 'ArrowRight';
             const step = event.shiftKey ? RESIZE_STEP * 5 : RESIZE_STEP;
-            resizeBy(event.key === 'ArrowRight' ? step : -step);
+            resizeBy(event.key === widen ? step : -step);
           }}
           className={cx(
-            'absolute top-0 right-0 h-full w-1 cursor-col-resize touch-none outline-none select-none focus-visible:bg-blue-500',
+            'absolute top-0 end-0 h-full w-1 cursor-col-resize touch-none outline-none select-none focus-visible:bg-sheet-accent',
             column.getIsResizing()
-              ? 'bg-blue-500'
-              : 'hover:bg-zinc-950/20 dark:hover:bg-white/20',
+              ? 'bg-sheet-accent'
+              : 'hover:bg-sheet-fg/20 dark:hover:bg-sheet-fg-dark/20',
           )}
         />
       )}

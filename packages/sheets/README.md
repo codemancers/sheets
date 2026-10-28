@@ -69,6 +69,12 @@ export function TaskSheet({ tasks }: { tasks: Task[] }) {
 }
 ```
 
+## Customising
+
+- **Colours.** Every colour is a `--color-sheet-*` theme token. The full list is in [`styles.css`](src/styles.css). To restyle the sheet, redefine the tokens after the import, for example to follow your design system. Each token has a `-dark` pair applied through `dark:`, so your dark-mode setting decides when it's used.
+- **Text.** `<Sheet labels={{ ... }} />` replaces any text the sheet renders itself: the row-number header, the names of the sort buttons and resize handles, the save statuses, the empty state and the add-row button. Use it to translate.
+- **Right-to-left.** Under `dir="rtl"` the layout mirrors. Also pass TanStack's `columnResizeDirection: 'rtl'` to `useSheet`, so dragging a column resizes it the right way.
+
 ## Development
 
 ```sh

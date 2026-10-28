@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useContext } from 'react';
 import type { SortingState } from '@tanstack/react-table';
 import { useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
+import { RtlContext } from '../direction';
 import { makeTasks, sortTasks } from '../data';
 import { taskColumns } from './task-columns';
 
@@ -9,6 +10,7 @@ const TASKS = makeTasks(10);
 
 /** Server-side sorting: the sheet reports the sort, the app applies it. */
 export function SortingDemo() {
+  const rtl = useContext(RtlContext);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [opened, setOpened] = useState<string>();
   const data = useMemo(() => sortTasks(TASKS, sorting), [sorting]);
@@ -17,6 +19,7 @@ export function SortingDemo() {
     [],
   );
   const sheet = useSheet({
+    columnResizeDirection: rtl ? 'rtl' : 'ltr',
     columns,
     data,
     getRowId: (task) => task.id,

@@ -1,3 +1,5 @@
+'use client';
+
 import type { CellContext, Row } from '@tanstack/react-table';
 import { cx } from './cx.js';
 import { useEffect, useRef } from 'react';
@@ -5,6 +7,7 @@ import { SheetCell } from './sheet-cell.js';
 import { SheetTextCell } from './cells/text-cell.js';
 import { SheetRowNumber } from './sheet-row-number.js';
 import { SheetSpacerColumn } from './sheet-spacer-column.js';
+import { sheetGrid } from './grid.js';
 import {
   cellStatusKey,
   type CellStatusState,
@@ -14,7 +17,6 @@ import type { RowChangesState } from '../hooks/use-row-changes.js';
 export type SheetRowProps<TData> = {
   row: Row<TData>;
   rowIndex: number;
-  gridTemplateColumns: string;
   rowHeight: number;
   highlight?: boolean;
   cellStatus?: CellStatusState;
@@ -46,7 +48,6 @@ function SheetCellContent<TData>({
 export function SheetRow<TData>({
   row,
   rowIndex,
-  gridTemplateColumns,
   rowHeight,
   highlight = false,
   cellStatus,
@@ -74,10 +75,10 @@ export function SheetRow<TData>({
       className={cx(
         'grid scroll-mb-16 transition-colors duration-1000',
         highlight
-          ? 'bg-yellow-100 dark:bg-yellow-500/20'
-          : 'hover:bg-zinc-950/2.5 dark:hover:bg-white/2.5',
+          ? 'bg-sheet-highlight dark:bg-sheet-highlight-dark'
+          : 'hover:bg-sheet-fg/2.5 dark:hover:bg-sheet-fg-dark/2.5',
       )}
-      style={{ gridTemplateColumns, minHeight: `${rowHeight}px` }}
+      style={{ ...sheetGrid, minHeight: `${rowHeight}px` }}
     >
       <SheetRowNumber label={rowIndex + 1} />
       {cells.map((cell, idx) => (

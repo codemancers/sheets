@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useContext } from 'react';
 import { useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
+import { RtlContext } from '../direction';
 import { makeTasks } from '../data';
 import { taskColumns } from './task-columns';
 
@@ -8,9 +9,11 @@ const TASKS = makeTasks(4);
 const STATES = ['Data', 'Loading', 'Empty'] as const;
 
 export function StatesDemo() {
+  const rtl = useContext(RtlContext);
   const [state, setState] = useState<(typeof STATES)[number]>('Loading');
   const columns = useMemo(() => taskColumns(), []);
   const sheet = useSheet({
+    columnResizeDirection: rtl ? 'rtl' : 'ltr',
     columns,
     data: state === 'Data' ? TASKS : [],
     getRowId: (task) => task.id,

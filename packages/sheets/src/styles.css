@@ -6,3 +6,55 @@
  *   @import '@codemancers/sheets/styles.css';
  */
 @source './';
+
+/*
+ * Theme tokens. The components take every colour from these, so an app
+ * restyles the sheet by redefining them after the import above, e.g. to
+ * follow its own design tokens:
+ *
+ *   @theme {
+ *     --color-sheet-bg: var(--background);
+ *     --color-sheet-bg-dark: var(--background);
+ *   }
+ *
+ * Each colour has a -dark pair, applied through Tailwind's dark: variant, so
+ * the app's dark-mode setting decides when it is used. The defaults are
+ * Tailwind's zinc and blue scales.
+ */
+@theme {
+  /* Surface and text. Borders and hover tints are fg at low opacity. */
+  --color-sheet-bg: #fff;
+  --color-sheet-bg-dark: oklch(21% 0.006 285.885);
+  --color-sheet-fg: oklch(14.1% 0.005 285.823);
+  --color-sheet-fg-dark: #fff;
+  --color-sheet-muted: oklch(55.2% 0.016 285.938);
+  --color-sheet-muted-dark: oklch(70.5% 0.015 286.067);
+  --color-sheet-faint: oklch(70.5% 0.015 286.067);
+  --color-sheet-faint-dark: oklch(55.2% 0.016 285.938);
+  --color-sheet-raised: oklch(98.5% 0 none);
+  --color-sheet-raised-dark: oklch(27.4% 0.006 286.033);
+  --color-sheet-skeleton: oklch(92% 0.004 286.32);
+  --color-sheet-skeleton-dark: oklch(37% 0.013 285.805);
+
+  /* The error tooltip. */
+  --color-sheet-tooltip: oklch(21% 0.006 285.885);
+  --color-sheet-tooltip-dark: oklch(37% 0.013 285.805);
+  --color-sheet-tooltip-fg: #fff;
+
+  /* Links, and the resize handle while dragging or focused. */
+  --color-sheet-link: oklch(54.6% 0.245 262.881);
+  --color-sheet-link-hover: oklch(48.8% 0.243 264.376);
+  --color-sheet-link-dark: oklch(70.7% 0.165 254.624);
+  --color-sheet-link-hover-dark: oklch(80.9% 0.105 251.813);
+  --color-sheet-accent: oklch(62.3% 0.214 259.815);
+
+  /* Cell status: refused, saved, unsaved. And the highlighted row. */
+  --color-sheet-error: oklch(57.7% 0.245 27.325);
+  --color-sheet-error-dark: oklch(70.4% 0.191 22.216);
+  --color-sheet-success: oklch(59.6% 0.145 163.225);
+  --color-sheet-success-dark: oklch(76.5% 0.177 163.223);
+  --color-sheet-warning: oklch(76.9% 0.188 70.08);
+  --color-sheet-warning-dark: oklch(82.8% 0.189 84.429);
+  --color-sheet-highlight: oklch(97.3% 0.071 103.193);
+  --color-sheet-highlight-dark: oklch(79.5% 0.184 86.047 / 20%);
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useCellStatus, useRowChanges, useSheet } from '@codemancers/sheets';
 import {
@@ -8,6 +8,7 @@ import {
   SheetTextCell,
 } from '@codemancers/sheets/ui';
 import { makeTasks, requiredTitle, saveTask, type Task } from '../data';
+import { RtlContext } from '../direction';
 
 const task = createColumnHelper<Task>();
 
@@ -45,6 +46,7 @@ const columns = [
 ];
 
 export function EditingDemo() {
+  const rtl = useContext(RtlContext);
   const [tasks, setTasks] = useState(() => makeTasks(6));
   const cellStatus = useCellStatus();
   const rowChanges = useRowChanges({
@@ -65,6 +67,7 @@ export function EditingDemo() {
     },
   });
   const sheet = useSheet({
+    columnResizeDirection: rtl ? 'rtl' : 'ltr',
     columns,
     data: tasks,
     getRowId: (task) => task.id,

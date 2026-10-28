@@ -1,4 +1,7 @@
+'use client';
+
 import { cx } from './cx.js';
+import { useSheetLabels } from './labels.js';
 import { Check, LoaderCircle, TriangleAlert } from './icons.js';
 import type { ReactNode } from 'react';
 import type { CellStatus, CellStatusState } from '../hooks/use-cell-status.js';
@@ -43,8 +46,9 @@ export function SheetCell({
     <div
       role="cell"
       className={cx(
-        'flex items-center border-r border-b border-r-zinc-950/5 border-b-zinc-950/5 dark:border-r-white/5 dark:border-b-white/5',
-        isFirstCol && 'border-l border-l-zinc-950/5 dark:border-l-white/5',
+        'flex items-center border-e border-b border-e-sheet-fg/5 border-b-sheet-fg/5 dark:border-e-sheet-fg-dark/5 dark:border-b-sheet-fg-dark/5',
+        isFirstCol &&
+          'border-s border-s-sheet-fg/5 dark:border-s-sheet-fg-dark/5',
         // Cell content truncates itself, so dropping the clip while a status is
         // showing is safe — and necessary, or the error popover is cut off.
         status ? 'relative overflow-visible' : 'overflow-hidden',
@@ -72,19 +76,20 @@ export function SheetCell({
  * the primary cell's hover actions, which keep their footprint at this edge.
  */
 function SheetCellStatus({ status }: { status: CellStatus }) {
+  const labels = useSheetLabels();
   // Deliberately quiet: a queued edit is normal, not a problem. A dot says
   // "not yet saved" without competing with the value being typed next door.
   if (status.kind === 'dirty') {
     return (
       <span
         role="status"
-        className="absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center rounded bg-white p-0.5 dark:bg-zinc-900"
+        className="absolute top-1/2 end-1 z-10 flex -translate-y-1/2 items-center rounded bg-sheet-bg p-0.5 dark:bg-sheet-bg-dark"
       >
         <span
           aria-hidden="true"
-          className="size-1.5 rounded-full bg-amber-500 dark:bg-amber-400"
+          className="size-1.5 rounded-full bg-sheet-warning dark:bg-sheet-warning-dark"
         />
-        <span className="sr-only">Unsaved</span>
+        <span className="sr-only">{labels.unsaved}</span>
       </span>
     );
   }
@@ -93,10 +98,10 @@ function SheetCellStatus({ status }: { status: CellStatus }) {
     return (
       <span
         role="status"
-        className="absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center rounded bg-white p-0.5 text-zinc-400 dark:bg-zinc-900 dark:text-zinc-500"
+        className="absolute top-1/2 end-1 z-10 flex -translate-y-1/2 items-center rounded bg-sheet-bg p-0.5 text-sheet-faint dark:bg-sheet-bg-dark dark:text-sheet-faint-dark"
       >
         <LoaderCircle className="size-3.5 animate-spin" aria-hidden="true" />
-        <span className="sr-only">Saving</span>
+        <span className="sr-only">{labels.saving}</span>
       </span>
     );
   }
@@ -105,16 +110,16 @@ function SheetCellStatus({ status }: { status: CellStatus }) {
     return (
       <span
         role="status"
-        className="absolute top-1/2 right-1 z-10 flex -translate-y-1/2 items-center rounded bg-white p-0.5 text-emerald-600 dark:bg-zinc-900 dark:text-emerald-400"
+        className="absolute top-1/2 end-1 z-10 flex -translate-y-1/2 items-center rounded bg-sheet-bg p-0.5 text-sheet-success dark:bg-sheet-bg-dark dark:text-sheet-success-dark"
       >
         <Check className="size-4" aria-hidden="true" />
-        <span className="sr-only">Saved</span>
+        <span className="sr-only">{labels.saved}</span>
       </span>
     );
   }
 
   return (
-    <span className="group/cell-status absolute top-1/2 right-1 z-10 -translate-y-1/2">
+    <span className="group/cell-status absolute top-1/2 end-1 z-10 -translate-y-1/2">
       {/* Announced once when it lands: a sighted user sees the icon, but a
           screen-reader user would otherwise have to go hunting for it. */}
       <span role="alert" className="sr-only">
@@ -124,7 +129,7 @@ function SheetCellStatus({ status }: { status: CellStatus }) {
         type="button"
         // Labelled with the message itself, so focusing the icon re-reads it.
         aria-label={status.message}
-        className="flex items-center rounded bg-white p-0.5 text-red-600 hover:bg-red-500/10 dark:bg-zinc-900 dark:text-red-400"
+        className="flex items-center rounded bg-sheet-bg p-0.5 text-sheet-error hover:bg-sheet-error/10 dark:bg-sheet-bg-dark dark:text-sheet-error-dark"
       >
         <TriangleAlert className="size-4" />
       </button>
@@ -133,7 +138,7 @@ function SheetCellStatus({ status }: { status: CellStatus }) {
       <span
         // Visual only — the button above already carries the text for AT.
         aria-hidden="true"
-        className="pointer-events-none invisible absolute top-full right-0 z-20 mt-1 w-64 rounded-md bg-zinc-900 px-2 py-1.5 text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-focus-within/cell-status:visible group-focus-within/cell-status:opacity-100 group-hover/cell-status:visible group-hover/cell-status:opacity-100 dark:bg-zinc-700"
+        className="pointer-events-none invisible absolute top-full end-0 z-20 mt-1 w-64 rounded-md bg-sheet-tooltip px-2 py-1.5 text-xs leading-snug text-sheet-tooltip-fg opacity-0 shadow-lg transition-opacity group-focus-within/cell-status:visible group-focus-within/cell-status:opacity-100 group-hover/cell-status:visible group-hover/cell-status:opacity-100 dark:bg-sheet-tooltip-dark"
       >
         {status.message}
       </span>

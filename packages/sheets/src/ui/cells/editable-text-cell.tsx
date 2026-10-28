@@ -85,7 +85,7 @@ export function SheetEditableTextCell({
         aria-label={cell.label}
         {...inputProps}
         className={cx(
-          'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-zinc-950 outline-none focus:outline-none dark:text-white',
+          'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-sheet-fg outline-none focus:outline-none dark:text-sheet-fg-dark',
           className,
         )}
       />
@@ -101,10 +101,10 @@ export function SheetEditableTextCell({
         beginEdit();
       }}
       className={cx(
-        'block w-full cursor-text truncate px-2 py-1.5 text-left text-sm',
+        'block w-full cursor-text truncate px-2 py-1.5 text-start text-sm',
         displayValue
-          ? 'text-zinc-950 dark:text-white'
-          : 'text-zinc-400 dark:text-zinc-500',
+          ? 'text-sheet-fg dark:text-sheet-fg-dark'
+          : 'text-sheet-faint dark:text-sheet-faint-dark',
         className,
       )}
     >

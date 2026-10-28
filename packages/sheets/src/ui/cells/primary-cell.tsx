@@ -1,3 +1,5 @@
+'use client';
+
 import { cx } from '../cx.js';
 import { ArrowUpRight, PanelRight } from '../icons.js';
 import type { MouseEvent, ReactNode } from 'react';
@@ -94,10 +96,10 @@ function DefaultLink({ children, ...props }: LinkLikeProps) {
 }
 
 const nameLinkClass =
-  'block min-w-0 truncate px-2 py-1.5 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300';
+  'block min-w-0 truncate px-2 py-1.5 text-sm text-sheet-link hover:text-sheet-link-hover dark:text-sheet-link-dark dark:hover:text-sheet-link-hover-dark';
 
 const iconActionClass =
-  'rounded p-1 text-zinc-500 hover:bg-zinc-950/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white';
+  'rounded p-1 text-sheet-muted hover:bg-sheet-fg/5 hover:text-sheet-fg dark:text-sheet-muted-dark dark:hover:bg-sheet-fg-dark/5 dark:hover:text-sheet-fg-dark';
 
 /**
  * Primary (name) cell for Sheet rows: the row's name — a link, a button that
@@ -165,7 +167,7 @@ export function SheetPrimaryCell({
         aria-label={cell.label}
         {...inputProps}
         className={cx(
-          'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-zinc-950 outline-none focus:outline-none dark:text-white',
+          'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-sheet-fg outline-none focus:outline-none dark:text-sheet-fg-dark',
           className,
         )}
       />
@@ -173,7 +175,7 @@ export function SheetPrimaryCell({
   }
 
   return (
-    <div className={cx('flex w-full items-center gap-1 pr-1', className)}>
+    <div className={cx('flex w-full items-center gap-1 pe-1', className)}>
       {editable ? (
         // Plain text, not link-blue: the click edits rather than navigates, and
         // blue would promise navigation. `cursor-text` is the tell, same as
@@ -186,14 +188,14 @@ export function SheetPrimaryCell({
             editable.onEditStart?.();
             beginEdit();
           }}
-          className="block min-w-0 cursor-text truncate px-2 py-1.5 text-left text-sm text-zinc-950 dark:text-white"
+          className="block min-w-0 cursor-text truncate px-2 py-1.5 text-start text-sm text-sheet-fg dark:text-sheet-fg-dark"
         >
           {/* An empty value means a refused edit is still on screen, so show the
               placeholder rather than a blank cell that reads as broken. When a
               refused value is showing it wins over `children`, which would
               otherwise render the stored value the cell no longer reflects. */}
           {value === '' && editable.placeholder ? (
-            <span className="text-zinc-400 dark:text-zinc-500">
+            <span className="text-sheet-faint dark:text-sheet-faint-dark">
               {editable.placeholder}
             </span>
           ) : pending !== undefined ? (
@@ -226,12 +228,12 @@ export function SheetPrimaryCell({
         <button
           type="button"
           onClick={onOpen}
-          className={cx(nameLinkClass, 'text-left')}
+          className={cx(nameLinkClass, 'text-start')}
         >
           {children}
         </button>
       ) : (
-        <span className="block min-w-0 truncate px-2 py-1.5 text-sm text-zinc-950 dark:text-white">
+        <span className="block min-w-0 truncate px-2 py-1.5 text-sm text-sheet-fg dark:text-sheet-fg-dark">
           {children}
         </span>
       )}

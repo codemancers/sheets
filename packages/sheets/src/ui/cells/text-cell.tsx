@@ -17,8 +17,8 @@ export function SheetTextCell({
       className={cx(
         'block w-full truncate px-2 py-1.5 text-sm',
         muted
-          ? 'text-zinc-500 dark:text-zinc-400'
-          : 'text-zinc-950 dark:text-white',
+          ? 'text-sheet-muted dark:text-sheet-muted-dark'
+          : 'text-sheet-fg dark:text-sheet-fg-dark',
         className,
       )}
     >

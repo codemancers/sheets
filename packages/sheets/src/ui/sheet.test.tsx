@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useSheet } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 import { SheetEditableTextCell } from './cells/editable-text-cell.js';
+import type { SheetLabels } from './labels.js';
 
 type Row = { id: number; name: string };
 const rowColumn = createColumnHelper<Row>();
@@ -111,7 +112,13 @@ describe('Sheet', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<Task>();
 
-    function TaskSheet({ isLoading = false }: { isLoading?: boolean }) {
+    function TaskSheet({
+      isLoading = false,
+      labels,
+    }: {
+      isLoading?: boolean;
+      labels?: Partial<SheetLabels>;
+    }) {
       const sheet = useSheet({
         columns: [
           taskColumn.accessor('title', {
@@ -129,6 +136,7 @@ describe('Sheet', () => {
         <Sheet
           instance={sheet}
           isLoading={isLoading}
+          labels={labels}
           onAddRow={() => undefined}
         />
       );
@@ -203,5 +211,79 @@ describe('Sheet', () => {
         .closest('[role="cell"]');
       expect(cell?.parentElement?.getAttribute('role')).toBe('row');
     });
+
+    it('renders its own text from labels', () => {
+      render(
+        <TaskSheet
+          labels={{
+            rowNumber: 'Fila',
+            sort: (column) => `Ordenar ${column}`,
+            resize: (column) => `Redimensionar ${column}`,
+            width: (pixels) => `${pixels} píxeles`,
+            addRow: 'Añadir fila',
+          }}
+        />,
+      );
+
+      expect(screen.getByRole('columnheader', { name: 'Fila' })).toBeTruthy();
+      expect(
+        screen.getByRole('button', { name: 'Ordenar Title' }),
+      ).toBeTruthy();
+      expect(
+        screen
+          .getByRole('separator', { name: 'Redimensionar Title' })
+          .getAttribute('aria-valuetext'),
+      ).toBe('200 píxeles');
+      expect(screen.getByRole('button', { name: 'Añadir fila' })).toBeTruthy();
+    });
+
+    it('shows the empty label in a cell of the table', () => {
+      function Empty() {
+        const sheet = useSheet({
+          columns: [rowColumn.accessor('name', {})],
+          data: [],
+        });
+        return <Sheet instance={sheet} labels={{ empty: 'Sin datos' }} />;
+      }
+      render(<Empty />);
+
+      expect(screen.getByRole('cell').textContent).toBe('Sin datos');
+    });
+  });
+
+  // TanStack's advice for live resizing: only the header and the column
+  // widths should change while a column is dragged.
+  it('does not re-render the rows while a column is dragged', () => {
+    type Task = { id: string; title: string };
+    const taskColumn = createColumnHelper<Task>();
+    const cellRenders = vi.fn();
+    const columns = [
+      taskColumn.accessor('title', {
+        header: 'Title',
+        size: 200,
+        cell: ({ getValue }) => {
+          cellRenders();
+          return getValue();
+        },
+      }),
+    ];
+    const data = [{ id: '1', title: 'Alpha' }];
+    function DragSheet() {
+      const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
+      return <Sheet instance={sheet} />;
+    }
+    render(<DragSheet />);
+    const handle = screen.getByRole('separator', { name: 'Resize Title' });
+    const root = screen.getByRole('table');
+
+    fireEvent.mouseDown(handle, { clientX: 100 });
+    const before = cellRenders.mock.calls.length;
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseMove(document, { clientX: 180 });
+
+    expect(root.style.getPropertyValue('--sheet-columns')).toContain('280px');
+    expect(cellRenders.mock.calls.length).toBe(before);
+
+    fireEvent.mouseUp(document, { clientX: 180 });
   });
 });
