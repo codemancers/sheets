@@ -4,13 +4,13 @@ import {
   useCellStatus,
   useRowChanges,
   useSheet,
+  useSheetCellScope,
 } from '@codemancers/sheets';
 import {
   Sheet,
   SheetEditableTextCell,
   SheetPrimaryCell,
   SheetTextCell,
-  useSheetCellScope,
 } from '@codemancers/sheets/ui';
 import { makeTasks, requiredTitle, saveTask, type Task } from '../data';
 
@@ -80,7 +80,6 @@ export function EditingDemo() {
         id: 'title',
         header: 'Title · saved per row',
         accessor: 'title',
-        type: 'editableText',
         width: 320,
         cell: ({ row }) => (
           <SheetPrimaryCell
@@ -100,7 +99,6 @@ export function EditingDemo() {
         id: 'owner',
         header: 'Owner · saved per cell',
         accessor: 'owner',
-        type: 'editableText',
         width: 220,
         cell: ({ row }) => (
           <OwnerCell task={row.original} onSaved={updateTask} />
@@ -110,7 +108,6 @@ export function EditingDemo() {
         id: 'status',
         header: 'Status',
         accessor: 'status',
-        type: 'text',
         cell: ({ getValue }) => (
           <SheetTextCell muted>{String(getValue())}</SheetTextCell>
         ),

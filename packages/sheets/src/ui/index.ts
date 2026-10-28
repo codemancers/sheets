@@ -6,7 +6,6 @@ export * from './sheet-header.js';
 // (which IS public surface for column definitions).
 export * from './sheet-row.js';
 export * from './sheet-cell.js';
-export * from './cell-context.js';
 export * from './sheet-row-number.js';
 export * from './sheet-add-row.js';
 export * from './sheet-empty.js';

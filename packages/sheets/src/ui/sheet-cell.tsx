@@ -3,7 +3,7 @@ import { Check, LoaderCircle, TriangleAlert } from './icons.js';
 import type { ReactNode } from 'react';
 import type { CellStatus, CellStatusState } from '../hooks/use-cell-status.js';
 import type { RowChangesState } from '../hooks/use-row-changes.js';
-import { SheetCellProvider } from './cell-context.js';
+import { SheetCellProvider } from '../hooks/cell-context.js';
 
 export type SheetCellProps = {
   children?: ReactNode;

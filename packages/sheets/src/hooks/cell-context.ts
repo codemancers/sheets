@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext } from 'react';
-import type { CellStatusState } from '../hooks/use-cell-status.js';
-import type { RowChangesState } from '../hooks/use-row-changes.js';
+import type { CellStatusState } from './use-cell-status.js';
+import type { RowChangesState } from './use-row-changes.js';
 
 /**
  * Lets a cell report on itself without the consumer wiring row and column ids

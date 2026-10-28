@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { SheetEditableTextCell } from './editable-text-cell.js';
-import { SheetCellProvider } from '../cell-context.js';
+import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
 
 const renderCell = (
