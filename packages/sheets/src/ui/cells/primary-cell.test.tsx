@@ -257,13 +257,14 @@ describe('SheetPrimaryCell', () => {
   // nothing else. This harness stands in for that scope.
   describe('inside a Sheet', () => {
     const nameSchema = {
-      safeParse: (value: unknown) =>
-        typeof value === 'string' && value.length > 0
-          ? ({ success: true } as const)
-          : ({
-              success: false,
-              error: { issues: [{ message: 'Project name is required' }] },
-            } as const),
+      '~standard': {
+        version: 1 as const,
+        vendor: 'test',
+        validate: (value: unknown) =>
+          typeof value === 'string' && value.length > 0
+            ? { value }
+            : { issues: [{ message: 'Project name is required' }] },
+      },
     };
 
     function Harness({ onCommit }: { onCommit: (v: string) => void }) {
@@ -284,7 +285,7 @@ describe('SheetPrimaryCell', () => {
                 placeholder: 'Enter project name...',
               }}
             >
-              {refused ?? 'Project Seven'}
+              {String(refused ?? 'Project Seven')}
             </SheetPrimaryCell>
           </SheetCellProvider>
           <output data-testid="status">
@@ -370,13 +371,14 @@ describe('SheetPrimaryCell', () => {
   // validating after staging would send exactly what the schema rejected.
   describe('staged submission', () => {
     const nameSchema = {
-      safeParse: (value: unknown) =>
-        typeof value === 'string' && value.length > 0
-          ? ({ success: true } as const)
-          : ({
-              success: false,
-              error: { issues: [{ message: 'Project name is required' }] },
-            } as const),
+      '~standard': {
+        version: 1 as const,
+        vendor: 'test',
+        validate: (value: unknown) =>
+          typeof value === 'string' && value.length > 0
+            ? { value }
+            : { issues: [{ message: 'Project name is required' }] },
+      },
     };
 
     function StagedHarness({
@@ -384,7 +386,7 @@ describe('SheetPrimaryCell', () => {
     }: {
       onSubmitRow: (
         rowId: string,
-        changes: Record<string, string>,
+        changes: Record<string, unknown>,
       ) => RowSubmitResult | Promise<RowSubmitResult>;
     }) {
       const cellStatus = useCellStatus();

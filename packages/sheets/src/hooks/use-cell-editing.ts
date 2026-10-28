@@ -1,6 +1,6 @@
 'use client';
 
-import type { SheetCellValidator } from './types.js';
+import type { SheetCellValidator, StandardSchemaV1Result } from './types.js';
 import { useSheetCellScope } from './cell-context.js';
 
 /**
@@ -38,19 +38,24 @@ export function useSheetCellEditing(schema?: SheetCellValidator) {
 
   /**
    * Runs the column's rule. Reports the failure on this cell and returns false,
-   * so the caller can bail before writing or staging anything.
+   * so the caller can bail before writing or staging anything. Synchronous
+   * schemas answer synchronously, so a passing value still reaches the
+   * caller's `onCommit` in the same microtask; async ones return a promise.
    */
-  const accepts = (next: string) => {
+  const accepts = (next: unknown): boolean | Promise<boolean> => {
     if (!schema || !scope || !cellStatus) return true;
-    const result = schema.safeParse(next);
-    if (result.success) return true;
-    cellStatus.rejectCellValue(
-      scope.rowId,
-      scope.columnId,
-      result.error?.issues?.[0]?.message ?? 'Invalid value',
-      next,
-    );
-    return false;
+    const settle = (result: StandardSchemaV1Result<unknown>) => {
+      if (!result.issues) return true;
+      cellStatus.rejectCellValue(
+        scope.rowId,
+        scope.columnId,
+        result.issues[0]?.message ?? 'Invalid value',
+        next,
+      );
+      return false;
+    };
+    const result = schema['~standard'].validate(next);
+    return result instanceof Promise ? result.then(settle) : settle(result);
   };
 
   /**
@@ -83,7 +88,7 @@ export function useSheetCellEditing(schema?: SheetCellValidator) {
   const canStage = scope !== undefined && rowChanges !== undefined;
 
   /** Hands the value to the row's buffer. Only valid when `canStage`. */
-  const stage = (next: string) =>
+  const stage = (next: unknown) =>
     scope && rowChanges
       ? rowChanges.stageCellValue(scope.rowId, scope.columnId, next)
       : Promise.resolve();

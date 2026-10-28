@@ -55,7 +55,9 @@ export function EditingDemo() {
       if (!result) {
         setTasks((current) =>
           current.map((task) =>
-            task.id === rowId ? { ...task, ...changes } : task,
+            task.id === rowId
+              ? { ...task, ...(changes as Partial<Task>) }
+              : task,
           ),
         );
       }

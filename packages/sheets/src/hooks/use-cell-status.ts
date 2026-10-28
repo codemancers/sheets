@@ -17,7 +17,7 @@ export type CellStatus =
   | { kind: 'error'; message: string };
 
 export type CellStatusMap = Record<string, CellStatus>;
-export type RejectedCellValueMap = Record<string, string>;
+export type RejectedCellValueMap = Record<string, unknown>;
 
 /** `{ field: [messages] }`, as returned by an API that attributes its errors. */
 export type CellFieldErrors = Record<string, string[]>;
@@ -180,7 +180,7 @@ export function useCellStatus() {
    * that was refused, so the cell can go on displaying it.
    */
   const rejectCellValue = useCallback(
-    (rowId: string, columnId: string, message: string, value?: string) => {
+    (rowId: string, columnId: string, message: string, value?: unknown) => {
       const key = cellStatusKey(rowId, columnId);
       if (value !== undefined) {
         setRejectedValues((current) => ({ ...current, [key]: value }));
@@ -204,7 +204,7 @@ export function useCellStatus() {
       rowId: string,
       fieldErrors: CellFieldErrors,
       opts?: {
-        values?: Record<string, string>;
+        values?: Record<string, unknown>;
         fieldToColumn?: Record<string, string>;
         columnIds?: string[];
       },

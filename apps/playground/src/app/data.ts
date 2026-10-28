@@ -53,12 +53,13 @@ const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * A pretend PATCH. A title of "taken" is refused with a field error, and
  * anything containing "offline" fails in transit.
  */
-export async function saveTask(changes: Record<string, string>) {
+export async function saveTask(changes: Record<string, unknown>) {
   await wait(400);
-  if (Object.values(changes).some((v) => v.toLowerCase().includes('offline'))) {
+  const texts = Object.values(changes).map((v) => String(v).toLowerCase());
+  if (texts.some((text) => text.includes('offline'))) {
     throw new Error('Network error');
   }
-  if (changes.title?.trim().toLowerCase() === 'taken') {
+  if (String(changes.title).trim().toLowerCase() === 'taken') {
     return {
       error: 'That name is taken',
       fieldErrors: { title: ['That name is taken'] },
@@ -67,13 +68,17 @@ export async function saveTask(changes: Record<string, string>) {
   return undefined;
 }
 
-/** Same rule shape as a zod schema's `safeParse`, without the dependency. */
+/**
+ * A Standard Schema, the interface zod, Valibot and ArkType schemas implement;
+ * written by hand so the playground needs no validation library.
+ */
 export const requiredTitle = {
-  safeParse: (value: unknown) =>
-    typeof value === 'string' && value.trim() !== ''
-      ? { success: true as const }
-      : {
-          success: false as const,
-          error: { issues: [{ message: 'Title is required' }] },
-        },
+  '~standard': {
+    version: 1 as const,
+    vendor: 'playground',
+    validate: (value: unknown) =>
+      typeof value === 'string' && value.trim() !== ''
+        ? { value }
+        : { issues: [{ message: 'Title is required' }] },
+  },
 };
