@@ -89,6 +89,8 @@ export function useSheetCellEditing(schema?: SheetCellValidator) {
       : Promise.resolve();
 
   return {
+    /** The column's header text, to name the editor for assistive tech. */
+    label: scope?.columnLabel,
     refusedValue,
     stagedValue,
     accepts,

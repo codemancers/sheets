@@ -24,13 +24,12 @@ export function SheetHeader<TData>({
           className="grid"
           style={{ gridTemplateColumns }}
         >
-          <SheetRowNumber />
+          <SheetRowNumber isHeader />
           {headerGroup.headers.map((header, idx) => (
             <SheetColumn
               key={header.id}
               header={header}
               isFirstCol={idx === 0}
-              isLastCol={false}
             />
           ))}
           <SheetSpacerColumn isHeader />

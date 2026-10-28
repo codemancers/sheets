@@ -1,7 +1,7 @@
 'use client';
 
 import { cx } from './cx.js';
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { SheetInstance } from '../hooks/use-sheet.js';
 import { SheetAddRow } from './sheet-add-row.js';
 import { SheetEmpty } from './sheet-empty.js';
@@ -45,10 +45,8 @@ export function Sheet<TData>({
 
   const headers = table.getHeaderGroups()[0]?.headers ?? [];
 
-  const gridTemplateColumns = useMemo(() => {
-    const colTracks = headers.map((h) => `${h.getSize() || 160}px`).join(' ');
-    return `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`;
-  }, [headers]);
+  const colTracks = headers.map((h) => `${h.getSize() || 160}px`).join(' ');
+  const gridTemplateColumns = `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`;
 
   const rows = table.getRowModel().rows;
 
@@ -61,10 +59,17 @@ export function Sheet<TData>({
       )}
     >
       <SheetHeader table={table} gridTemplateColumns={gridTemplateColumns} />
-      <div role="rowgroup" className="flex flex-1 flex-col">
+      <div
+        role="rowgroup"
+        aria-busy={isLoading || undefined}
+        className="flex flex-1 flex-col"
+      >
         {isLoading ? (
           (loadingState ?? (
-            <SheetLoading gridTemplateColumns={gridTemplateColumns} />
+            <SheetLoading
+              gridTemplateColumns={gridTemplateColumns}
+              rowHeight={rowHeight}
+            />
           ))
         ) : rows.length === 0 ? (
           <SheetEmpty gridTemplateColumns={gridTemplateColumns}>

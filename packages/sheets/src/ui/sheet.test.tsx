@@ -82,4 +82,105 @@ describe('Sheet', () => {
 
     expect(screen.getByText('Alpha').className).toContain('truncate');
   });
+
+  describe('accessibility', () => {
+    type Task = { id: string; title: string };
+
+    function TaskSheet({ isLoading = false }: { isLoading?: boolean }) {
+      const sheet = useSheet({
+        columns: [
+          defineSheetColumn<Task>({
+            id: 'title',
+            header: 'Title',
+            accessor: 'title',
+            sortable: true,
+            width: 200,
+            cell: ({ row }) => (
+              <SheetEditableTextCell value={row.original.title} />
+            ),
+          }),
+        ],
+        data: [{ id: '1', title: 'Alpha' }],
+        getRowId: (task) => task.id,
+      });
+      return (
+        <Sheet
+          instance={sheet}
+          isLoading={isLoading}
+          showAddRow
+          onAddRow={() => undefined}
+        />
+      );
+    }
+
+    it('names the row-number column', () => {
+      render(<TaskSheet />);
+
+      expect(screen.getByRole('columnheader', { name: 'Row' })).toBeTruthy();
+    });
+
+    it('announces the sort order on the column header', () => {
+      render(<TaskSheet />);
+      const header = screen.getByRole('columnheader', { name: /Title/ });
+      expect(header.getAttribute('aria-sort')).toBe('none');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Sort Title' }));
+
+      expect(header.getAttribute('aria-sort')).toBe('ascending');
+    });
+
+    it('resizes a column from the keyboard', () => {
+      render(<TaskSheet />);
+      const handle = screen.getByRole('separator', { name: 'Resize Title' });
+      expect(handle.getAttribute('aria-valuenow')).toBe('200');
+
+      fireEvent.keyDown(handle, { key: 'ArrowRight' });
+      expect(handle.getAttribute('aria-valuenow')).toBe('210');
+
+      fireEvent.keyDown(handle, { key: 'ArrowLeft', shiftKey: true });
+      expect(handle.getAttribute('aria-valuenow')).toBe('160');
+
+      fireEvent.doubleClick(handle);
+      expect(handle.getAttribute('aria-valuenow')).toBe('200');
+    });
+
+    it('names the editor after its column', () => {
+      render(<TaskSheet />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Alpha' }));
+
+      expect(screen.getByRole('textbox', { name: 'Title' })).toBeTruthy();
+    });
+
+    it.each(['Enter', 'Escape'])(
+      'returns focus to the cell when %s closes the editor',
+      (key) => {
+        render(<TaskSheet />);
+        fireEvent.click(screen.getByRole('button', { name: 'Alpha' }));
+
+        fireEvent.keyDown(screen.getByRole('textbox'), { key });
+
+        expect(document.activeElement).toBe(
+          screen.getByRole('button', { name: 'Alpha' }),
+        );
+      },
+    );
+
+    it('marks the rows busy while loading, hiding the placeholders', () => {
+      render(<TaskSheet isLoading />);
+
+      expect(screen.getByRole('rowgroup', { busy: true })).toBeTruthy();
+      // Only the header row: the skeleton rows are hidden.
+      expect(screen.getAllByRole('row')).toHaveLength(1);
+    });
+
+    it('puts the add-row button in a row of the table', () => {
+      render(<TaskSheet />);
+
+      const cell = screen
+        .getByRole('button', { name: 'Add row' })
+        .closest('[role="cell"]');
+      expect(cell?.parentElement?.getAttribute('role')).toBe('row');
+    });
+  });
 });

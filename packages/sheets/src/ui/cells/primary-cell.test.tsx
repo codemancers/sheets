@@ -90,10 +90,10 @@ describe('SheetPrimaryCell', () => {
     const drawerButton = screen.getByRole('button', {
       name: 'Open project in side drawer',
     });
-    const container = drawerButton.parentElement!;
-    expect(container.className).toContain('opacity-0');
-    expect(container.className).toContain('[[role=row]:hover_&]:opacity-100');
-    expect(container.className).toContain('focus-within:opacity-100');
+    const container = drawerButton.parentElement;
+    expect(container?.className).toContain('opacity-0');
+    expect(container?.className).toContain('[[role=row]:hover_&]:opacity-100');
+    expect(container?.className).toContain('focus-within:opacity-100');
   });
 
   it('navigates normally when there is no drawer', () => {
