@@ -29,6 +29,7 @@
 
 - **Branches:** branch from `main` with a name for the kind of change: `feat/…`, `fix/…`, `docs/…`, `refactor/…`, `chore/…` or `ci/…`.
 - **Commits:** follow [Conventional Commits](https://www.conventionalcommits.org). Mark a breaking change with `!` and a `BREAKING CHANGE:` footer. Keep a pull request to a few commits, grouped by kind.
+- **Pull requests:** title them the same way as commits, for example `fix: keep cells mounted when the columns are rebuilt`. Fill in the template that opens with the pull request, and keep it brief.
 - **Tests:**
   - Every bug fix comes with a test that fails without the fix.
   - For UI behaviour, test what a person gets (role, name, text, focus), not only that a callback ran.
