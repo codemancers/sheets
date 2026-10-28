@@ -2,6 +2,7 @@ import type { CellContext, Row } from '@tanstack/react-table';
 import { cx } from './cx.js';
 import { useEffect, useRef } from 'react';
 import { SheetCell } from './sheet-cell.js';
+import { SheetTextCell } from './cells/text-cell.js';
 import { SheetRowNumber } from './sheet-row-number.js';
 import { SheetSpacerColumn } from './sheet-spacer-column.js';
 import {
@@ -32,7 +33,14 @@ function SheetCellContent<TData>({
   context: CellContext<TData, unknown>;
 }) {
   const render = context.column.columnDef.cell;
-  return typeof render === 'function' ? render(context) : render;
+  const content = typeof render === 'function' ? render(context) : render;
+  // A bare value (a column with no cell renderer gets TanStack's, which
+  // returns the value as a string) needs the text cell's padding.
+  return typeof content === 'string' || typeof content === 'number' ? (
+    <SheetTextCell>{content}</SheetTextCell>
+  ) : (
+    content
+  );
 }
 
 export function SheetRow<TData>({

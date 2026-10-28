@@ -9,7 +9,7 @@ const STATES = ['Data', 'Loading', 'Empty'] as const;
 
 export function StatesDemo() {
   const [state, setState] = useState<(typeof STATES)[number]>('Loading');
-  const columns = useMemo(() => taskColumns(() => undefined), []);
+  const columns = useMemo(() => taskColumns(), []);
   const sheet = useSheet({
     columns,
     data: state === 'Data' ? TASKS : [],

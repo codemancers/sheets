@@ -11,7 +11,6 @@ type LinkLikeProps = {
   children?: ReactNode;
   'aria-label'?: string;
   title?: string;
-  prefetch?: boolean;
   onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
 };
 
@@ -59,40 +58,52 @@ export type SheetPrimaryCellEditable = {
 
 export type SheetPrimaryCellProps = {
   /**
-   * Drawer URL (`/<resource>?id=<rowId>`) — where modified-click / "open in new
-   * tab" lands. Unused when `editable` is set: the name is then a button, and
+   * Where the name links — typically the drawer URL (`/<resource>?id=<rowId>`),
+   * so modified-click / "open in new tab" lands there. Omit for a name that is
+   * not a link. Unused when `editable` is set: the name is then a button, and
    * `detailHref`'s icon is the cmd-clickable link.
    */
-  href: string;
+  href?: string;
   /**
    * Full detail page URL (`/<resource>/<rowId>`). Omit for drawer-only
    * entities (no full-page route) — the detail icon is not rendered.
    */
   detailHref?: string;
-  /** Opens the detail drawer — fired by plain click on the name and by the panel icon. */
-  onOpenDrawer: () => void;
+  /**
+   * Opens the detail drawer — fired by plain click on the name and by the
+   * panel icon. Omit when there is no drawer: the name then navigates
+   * normally and the panel icon is not shown.
+   */
+  onOpenDrawer?: () => void;
   /** Accessible label for the drawer icon. */
   drawerLabel?: string;
   /** Accessible label for the detail-page icon. */
   detailLabel?: string;
   children?: ReactNode;
   className?: string;
+  /**
+   * Your router's link, e.g. Next.js `Link`. To stop Next from prefetching
+   * every row's URL, wrap it: `(props) => <Link prefetch={false} {...props} />`.
+   */
   LinkComponent?: React.ComponentType<LinkLikeProps>;
   /** Omit for a read-only name cell (the default). */
   editable?: SheetPrimaryCellEditable;
 };
 
-function DefaultLink({ prefetch: _prefetch, ...props }: LinkLikeProps) {
-  return <a {...props} />;
+function DefaultLink({ children, ...props }: LinkLikeProps) {
+  return <a {...props}>{children}</a>;
 }
+
+const nameLinkClass =
+  'block min-w-0 truncate px-2 py-1.5 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300';
 
 const iconActionClass =
   'rounded p-1 text-zinc-500 hover:bg-zinc-950/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white';
 
 /**
- * Primary (name) cell for Sheet rows: a drawer-opening link plus two
- * hover-revealed row actions — open the detail drawer, or jump to the
- * full detail page. SheetRow renders `role="row"`, so the actions
+ * Primary (name) cell for Sheet rows: the row's name — a link, a
+ * drawer-opener or plain text — plus up to two hover-revealed row actions:
+ * open the detail drawer, or jump to the full detail page. SheetRow renders `role="row"`, so the actions
  * reveal via an ancestor-hover arbitrary variant without the row
  * needing a `group` class; `focus-within` keeps them reachable by
  * keyboard.
@@ -193,45 +204,64 @@ export function SheetPrimaryCell({
             children
           )}
         </button>
-      ) : (
+      ) : href ? (
         <LinkComponent
           href={href}
-          prefetch={false}
-          onClick={(e) => {
-            // Plain left-click: open drawer in place. Modified clicks
-            // (cmd/ctrl/shift, middle button) fall through so "Open in
-            // new tab" lands on the drawer URL and auto-opens on mount.
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-            e.preventDefault();
-            onOpenDrawer();
-          }}
-          className="block min-w-0 truncate px-2 py-1.5 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          onClick={
+            onOpenDrawer
+              ? (e) => {
+                  // Plain left-click: open drawer in place. Modified clicks
+                  // (cmd/ctrl/shift, middle button) fall through so "Open in
+                  // new tab" lands on the drawer URL and auto-opens on mount.
+                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0)
+                    return;
+                  e.preventDefault();
+                  onOpenDrawer();
+                }
+              : undefined
+          }
+          className={nameLinkClass}
         >
           {children}
         </LinkComponent>
-      )}
-      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 [[role=row]:hover_&]:opacity-100">
+      ) : onOpenDrawer ? (
         <button
           type="button"
-          aria-label={drawerLabel}
-          title={drawerLabel}
           onClick={onOpenDrawer}
-          className={iconActionClass}
+          className={cx(nameLinkClass, 'text-left')}
         >
-          <PanelRight className="size-4" />
+          {children}
         </button>
-        {detailHref != null && (
-          <LinkComponent
-            href={detailHref}
-            prefetch={false}
-            aria-label={detailLabel}
-            title={detailLabel}
-            className={iconActionClass}
-          >
-            <ArrowUpRight className="size-4" />
-          </LinkComponent>
-        )}
-      </div>
+      ) : (
+        <span className="block min-w-0 truncate px-2 py-1.5 text-sm text-zinc-950 dark:text-white">
+          {children}
+        </span>
+      )}
+      {(onOpenDrawer || detailHref != null) && (
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 [[role=row]:hover_&]:opacity-100">
+          {onOpenDrawer && (
+            <button
+              type="button"
+              aria-label={drawerLabel}
+              title={drawerLabel}
+              onClick={onOpenDrawer}
+              className={iconActionClass}
+            >
+              <PanelRight className="size-4" />
+            </button>
+          )}
+          {detailHref != null && (
+            <LinkComponent
+              href={detailHref}
+              aria-label={detailLabel}
+              title={detailLabel}
+              className={iconActionClass}
+            >
+              <ArrowUpRight className="size-4" />
+            </LinkComponent>
+          )}
+        </div>
+      )}
     </div>
   );
 }

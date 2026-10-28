@@ -76,4 +76,10 @@ describe('Sheet', () => {
 
     expect(screen.getByRole('textbox')).toHaveProperty('value', 'Alph');
   });
+
+  it('renders a column without a cell renderer as a padded text cell', () => {
+    render(<TestSheet data={[{ id: 1, name: 'Alpha' }]} />);
+
+    expect(screen.getByText('Alpha').className).toContain('truncate');
+  });
 });

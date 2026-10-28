@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SheetEditableTextCell } from './editable-text-cell.js';
 import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
+import { useRowChanges } from '../../hooks/use-row-changes.js';
 
 const renderCell = (
   props: Partial<React.ComponentProps<typeof SheetEditableTextCell>> = {},
@@ -205,6 +206,70 @@ describe('SheetEditableTextCell', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
 
       expect(onCommit).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('staged submission', () => {
+    function StagedHarness({
+      stage,
+      onCommit,
+      onSubmitRow,
+    }: {
+      stage?: boolean;
+      onCommit: (next: string) => void;
+      onSubmitRow: (rowId: string, changes: Record<string, string>) => void;
+    }) {
+      const cellStatus = useCellStatus();
+      const rowChanges = useRowChanges({ cellStatus, onSubmitRow });
+      return (
+        <div role="row">
+          <SheetCellProvider
+            value={{ rowId: '7', columnId: 'title', cellStatus, rowChanges }}
+          >
+            <SheetEditableTextCell
+              value="Task Seven"
+              stage={stage}
+              onCommit={onCommit}
+            />
+          </SheetCellProvider>
+        </div>
+      );
+    }
+
+    const editTo = (next: string) => {
+      fireEvent.click(screen.getByRole('button', { name: 'Task Seven' }));
+      const input = screen.getByDisplayValue('Task Seven');
+      fireEvent.change(input, { target: { value: next } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    };
+
+    it('hands the value to the row buffer when asked to stage', async () => {
+      const onCommit = vi.fn();
+      const onSubmitRow = vi.fn();
+      render(
+        <StagedHarness stage onCommit={onCommit} onSubmitRow={onSubmitRow} />,
+      );
+
+      editTo('Renamed Seven');
+
+      await waitFor(() =>
+        expect(onSubmitRow).toHaveBeenCalledWith('7', {
+          title: 'Renamed Seven',
+        }),
+      );
+      expect(onCommit).not.toHaveBeenCalled();
+    });
+
+    // The default: a commit can mean create, which must not patch a row.
+    it('calls onCommit and leaves the row buffer alone by default', () => {
+      const onCommit = vi.fn();
+      const onSubmitRow = vi.fn();
+      render(<StagedHarness onCommit={onCommit} onSubmitRow={onSubmitRow} />);
+
+      editTo('Renamed Seven');
+
+      expect(onCommit).toHaveBeenCalledWith('Renamed Seven');
+      expect(onSubmitRow).not.toHaveBeenCalled();
     });
   });
 });

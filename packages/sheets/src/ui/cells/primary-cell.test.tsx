@@ -96,6 +96,40 @@ describe('SheetPrimaryCell', () => {
     expect(container.className).toContain('focus-within:opacity-100');
   });
 
+  it('navigates normally when there is no drawer', () => {
+    render(
+      <SheetPrimaryCell href="#project-7">Project Seven</SheetPrimaryCell>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Project Seven' });
+    // fireEvent.click returns false when the default was prevented.
+    expect(fireEvent.click(link)).toBe(true);
+    expect(
+      screen.queryByRole('button', { name: 'Open in side drawer' }),
+    ).toBeNull();
+  });
+
+  it('opens the drawer from the name when there is no URL', () => {
+    const onOpenDrawer = vi.fn();
+    render(
+      <SheetPrimaryCell onOpenDrawer={onOpenDrawer}>
+        Project Seven
+      </SheetPrimaryCell>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Project Seven' }));
+
+    expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders plain text with neither a URL nor a drawer', () => {
+    render(<SheetPrimaryCell>Project Seven</SheetPrimaryCell>);
+
+    expect(screen.getByText('Project Seven').tagName).toBe('SPAN');
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
   describe('editable', () => {
     const renderEditable = (onCommit = vi.fn(), onOpenDrawer = vi.fn()) => {
       render(

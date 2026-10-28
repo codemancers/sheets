@@ -70,9 +70,10 @@ export function App() {
           title="Inline editing"
           description={
             <>
-              Click a title or owner to edit. Titles are batched per row after a
-              600 ms pause; owners save on commit. Type <code>taken</code> for a
-              refused title, or <code>offline</code> for a network error.
+              Click a title or owner to edit. A row&apos;s edits are batched
+              into one save after a 600 ms pause. Type <code>taken</code> as a
+              title to have it refused, or <code>offline</code> anywhere for a
+              network error.
             </>
           }
         >
@@ -95,7 +96,7 @@ export function App() {
         <Demo
           id="large"
           title="1,000 rows"
-          description="Sticky header and row numbers. There is no virtualization yet, so every row is rendered."
+          description="Sorted in the browser: click a sortable header. There is no virtualization yet, so every row is rendered."
         >
           <LargeDemo />
         </Demo>
