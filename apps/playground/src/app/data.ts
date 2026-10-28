@@ -10,7 +10,7 @@ export type Task = {
 
 const TITLES = [
   'Draft the launch post',
-  'Wire Sheets into Juno',
+  'Set up the staging server',
   'Accessibility pass',
   'Publish v0.1.0',
   'Review the README',
@@ -21,7 +21,7 @@ const TITLES = [
   'Write release notes',
 ];
 const STATUSES = ['Todo', 'In progress', 'Blocked', 'Done'];
-const OWNERS = ['Yuva', 'Sibtain', 'Asha', 'Rohan', 'Meera'];
+const OWNERS = ['Ada', 'Grace', 'Alan', 'Linus', 'Margaret'];
 
 /** Deterministic, so screenshots and e2e assertions stay stable. */
 export function makeTasks(count: number): Task[] {
