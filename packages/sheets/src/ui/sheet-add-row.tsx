@@ -1,36 +1,36 @@
+'use client';
+
 import { PlusIcon } from './icons.js';
+import { sheetGrid } from './grid.js';
+import { useSheetLabels } from './labels.js';
 
 export type SheetAddRowProps = {
-  gridTemplateColumns: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Defaults to the `addRow` label. */
   label?: string;
 };
 
 /** The sticky footer row with the add button. */
-export function SheetAddRow({
-  gridTemplateColumns,
-  onClick,
-  disabled,
-  label = 'Add row',
-}: SheetAddRowProps) {
+export function SheetAddRow({ onClick, disabled, label }: SheetAddRowProps) {
+  const labels = useSheetLabels();
   return (
     <div
       role="row"
-      className="sticky bottom-0 z-10 grid border-t border-t-zinc-950/10 bg-white hover:bg-zinc-50 dark:border-t-white/10 dark:bg-zinc-900 dark:hover:bg-zinc-800"
-      style={{ gridTemplateColumns }}
+      className="sticky bottom-0 z-10 grid border-t border-t-sheet-fg/10 bg-sheet-bg hover:bg-sheet-raised dark:border-t-sheet-fg-dark/10 dark:bg-sheet-bg-dark dark:hover:bg-sheet-raised-dark"
+      style={sheetGrid}
     >
       <div
         aria-hidden="true"
-        className="border-r border-r-zinc-950/5 bg-zinc-950/2.5 dark:border-r-white/5 dark:bg-white/2.5"
+        className="border-e border-e-sheet-fg/5 bg-sheet-fg/2.5 dark:border-e-sheet-fg-dark/5 dark:bg-sheet-fg-dark/2.5"
       />
       <div role="cell" style={{ gridColumn: '2 / -1' }}>
         <button
           type="button"
           onClick={onClick}
           disabled={disabled}
-          className="flex w-full items-center gap-1 px-2 py-1.5 text-left text-zinc-500 transition-colors hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:text-zinc-400 dark:hover:text-white"
-          aria-label={label}
+          className="flex w-full items-center gap-1 px-2 py-1.5 text-start text-sheet-muted transition-colors hover:text-sheet-fg disabled:cursor-not-allowed disabled:opacity-50 dark:text-sheet-muted-dark dark:hover:text-sheet-fg-dark"
+          aria-label={label ?? labels.addRow}
         >
           <PlusIcon className="size-5" />
         </button>

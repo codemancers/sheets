@@ -1,14 +1,21 @@
 'use client';
 
 import { cx } from './cx.js';
-import type { ReactNode } from 'react';
-import type { RowData } from '@tanstack/react-table';
+import { memo, type CSSProperties, type ReactNode } from 'react';
+import type { Row, RowData } from '@tanstack/react-table';
 import type { SheetInstance } from '../hooks/use-sheet.js';
+import type { CellStatusState } from '../hooks/use-cell-status.js';
+import type { RowChangesState } from '../hooks/use-row-changes.js';
 import { SheetAddRow } from './sheet-add-row.js';
 import { SheetEmpty } from './sheet-empty.js';
 import { SheetLoading } from './sheet-loading.js';
 import { SheetHeader } from './sheet-header.js';
 import { SheetRow } from './sheet-row.js';
+import {
+  defaultSheetLabels,
+  SheetLabelsProvider,
+  type SheetLabels,
+} from './labels.js';
 
 const ROW_NUMBER_WIDTH = 40;
 const DEFAULT_ROW_HEIGHT = 32;
@@ -23,7 +30,6 @@ export type SheetProps<TData extends RowData> = {
   emptyState?: ReactNode;
   /** Shows the add-row footer, whose button calls this. */
   onAddRow?: () => void;
-  addRowLabel?: string;
   addRowDisabled?: boolean;
   /**
    * The id of a row to highlight and scroll into view: TanStack's `row.id`,
@@ -31,7 +37,60 @@ export type SheetProps<TData extends RowData> = {
    * moment to fade the highlight.
    */
   highlightedRowId?: string;
+  /** Replaces any of the text the sheet renders itself, e.g. to translate it. */
+  labels?: Partial<SheetLabels>;
 };
+
+type SheetBodyProps<TData extends RowData> = {
+  rows: Row<TData>[];
+  rowHeight: number;
+  highlightedRowId?: string;
+  cellStatus?: CellStatusState;
+  rowChanges?: RowChangesState;
+  /** True while a column is being dragged wider or narrower. */
+  resizing: boolean;
+};
+
+function SheetRows<TData extends RowData>({
+  rows,
+  rowHeight,
+  highlightedRowId,
+  cellStatus,
+  rowChanges,
+}: SheetBodyProps<TData>) {
+  return (
+    <>
+      {rows.map((row, idx) => (
+        <SheetRow
+          key={row.id}
+          row={row}
+          rowIndex={idx}
+          rowHeight={rowHeight}
+          highlight={highlightedRowId === row.id}
+          cellStatus={cellStatus}
+          rowChanges={rowChanges}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * While a column is dragged, only the header and the root's --sheet-columns
+ * change, so the rows skip re-rendering: TanStack's advice for live resizing.
+ * At any other time they re-render as usual, since visibility or order
+ * changes reach them through the same row objects.
+ */
+const SheetBody = memo(
+  SheetRows,
+  (prev, next) =>
+    next.resizing &&
+    prev.rows === next.rows &&
+    prev.rowHeight === next.rowHeight &&
+    prev.highlightedRowId === next.highlightedRowId &&
+    prev.cellStatus === next.cellStatus &&
+    prev.rowChanges === next.rowChanges,
+) as typeof SheetRows;
 
 export function Sheet<TData extends RowData>({
   instance,
@@ -41,69 +100,68 @@ export function Sheet<TData extends RowData>({
   loadingState,
   emptyState,
   onAddRow,
-  addRowLabel,
   addRowDisabled,
   highlightedRowId,
+  labels,
 }: SheetProps<TData>) {
   const { table, cellStatus, rowChanges } = instance;
+  const text = labels
+    ? { ...defaultSheetLabels, ...labels }
+    : defaultSheetLabels;
 
   // Leaf columns, so grouped headers span their columns rather than add tracks.
-  const colTracks = table
-    .getVisibleLeafColumns()
+  const leafColumns = table.getVisibleLeafColumns();
+  const colTracks = leafColumns
     .map((column) => `${column.getSize()}px`)
     .join(' ');
-  const gridTemplateColumns = `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`;
+  const columns = {
+    '--sheet-columns': `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`,
+  } as CSSProperties;
 
   const rows = table.getRowModel().rows;
 
   return (
-    <div
-      role="table"
-      className={cx(
-        'flex h-full w-full flex-col overflow-auto bg-white text-sm text-zinc-950 dark:bg-zinc-900 dark:text-white',
-        className,
-      )}
-    >
-      <SheetHeader table={table} gridTemplateColumns={gridTemplateColumns} />
+    <SheetLabelsProvider value={text}>
       <div
-        role="rowgroup"
-        aria-busy={isLoading || undefined}
-        className="flex flex-1 flex-col"
+        role="table"
+        style={columns}
+        className={cx(
+          'flex h-full w-full flex-col overflow-auto bg-sheet-bg text-sm text-sheet-fg dark:bg-sheet-bg-dark dark:text-sheet-fg-dark',
+          className,
+        )}
       >
-        {isLoading ? (
-          (loadingState ?? (
-            <SheetLoading
-              gridTemplateColumns={gridTemplateColumns}
+        <SheetHeader table={table} />
+        <div
+          role="rowgroup"
+          aria-busy={isLoading || undefined}
+          className="flex flex-1 flex-col"
+        >
+          {isLoading ? (
+            (loadingState ?? (
+              <SheetLoading
+                columnCount={leafColumns.length}
+                rowHeight={rowHeight}
+              />
+            ))
+          ) : rows.length === 0 ? (
+            <SheetEmpty>{emptyState}</SheetEmpty>
+          ) : (
+            <SheetBody
+              rows={rows}
               rowHeight={rowHeight}
-            />
-          ))
-        ) : rows.length === 0 ? (
-          <SheetEmpty gridTemplateColumns={gridTemplateColumns}>
-            {emptyState ?? 'No data.'}
-          </SheetEmpty>
-        ) : (
-          rows.map((row, idx) => (
-            <SheetRow
-              key={row.id}
-              row={row}
-              rowIndex={idx}
-              gridTemplateColumns={gridTemplateColumns}
-              rowHeight={rowHeight}
-              highlight={highlightedRowId === row.id}
+              highlightedRowId={highlightedRowId}
               cellStatus={cellStatus}
               rowChanges={rowChanges}
+              resizing={Boolean(
+                table.getState().columnSizingInfo.isResizingColumn,
+              )}
             />
-          ))
+          )}
+        </div>
+        {!isLoading && onAddRow && (
+          <SheetAddRow onClick={onAddRow} disabled={addRowDisabled} />
         )}
       </div>
-      {!isLoading && onAddRow && (
-        <SheetAddRow
-          gridTemplateColumns={gridTemplateColumns}
-          onClick={onAddRow}
-          disabled={addRowDisabled}
-          label={addRowLabel}
-        />
-      )}
-    </div>
+    </SheetLabelsProvider>
   );
 }

@@ -1,6 +1,8 @@
+import { useContext } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
+import { RtlContext } from '../direction';
 import { makeTasks, type Task } from '../data';
 
 const TASKS = makeTasks(1000);
@@ -31,7 +33,9 @@ const columns = [
 
 /** Sorted in the browser, the default. No virtualization yet. */
 export function LargeDemo() {
+  const rtl = useContext(RtlContext);
   const sheet = useSheet({
+    columnResizeDirection: rtl ? 'rtl' : 'ltr',
     columns,
     data: TASKS,
     getRowId: (task) => task.id,

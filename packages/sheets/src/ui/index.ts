@@ -16,3 +16,4 @@ export * from './cells/link-cell.js';
 export * from './cells/primary-cell.js';
 export * from './cells/editable-text-cell.js';
 export * from './cells/actions-cell.js';
+export * from './labels.js';

@@ -195,6 +195,25 @@ test('sorts 1,000 rows in the browser', async ({ page }) => {
   ).toHaveText('Accessibility pass');
 });
 
+test('mirrors for right-to-left layouts', async ({ page }) => {
+  await page.getByRole('button', { name: 'Right to left' }).click();
+  const region = demo(page, 'Sorting and row actions');
+  const header = region.getByRole('columnheader', { name: /Title/ });
+  const handle = region.getByRole('separator', { name: 'Resize Title' });
+
+  // The resize handle sits on the column's trailing edge, which is the left.
+  const [headerBox, handleBox] = await Promise.all([
+    header.boundingBox(),
+    handle.boundingBox(),
+  ]);
+  expect(handleBox?.x).toBeLessThanOrEqual((headerBox?.x ?? 0) + 1);
+
+  // And the arrow pointing away from the column widens it.
+  await handle.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(handle).toHaveAttribute('aria-valuenow', '310');
+});
+
 test('dark mode follows the toggle', async ({ page }) => {
   await page.getByRole('button', { name: 'Dark mode' }).click();
   await expect(page.locator('html')).toHaveClass(/dark/);

@@ -1,4 +1,7 @@
+'use client';
+
 import { cx } from './cx.js';
+import { useSheetLabels } from './labels.js';
 
 export type SheetRowNumberProps = {
   label?: string | number;
@@ -12,15 +15,20 @@ export function SheetRowNumber({
   className,
   isHeader,
 }: SheetRowNumberProps) {
+  const labels = useSheetLabels();
   return (
     <div
       role={isHeader ? 'columnheader' : 'rowheader'}
       className={cx(
-        'flex items-center justify-center border-r border-b border-r-zinc-950/5 border-b-zinc-950/5 bg-zinc-950/2.5 text-xs text-zinc-500 select-none dark:border-r-white/5 dark:border-b-white/5 dark:bg-white/2.5 dark:text-zinc-400',
+        'flex items-center justify-center border-e border-b border-e-sheet-fg/5 border-b-sheet-fg/5 bg-sheet-fg/2.5 text-xs text-sheet-muted select-none dark:border-e-sheet-fg-dark/5 dark:border-b-sheet-fg-dark/5 dark:bg-sheet-fg-dark/2.5 dark:text-sheet-muted-dark',
         className,
       )}
     >
-      {isHeader ? <span className="sr-only">Row</span> : (label ?? '')}
+      {isHeader ? (
+        <span className="sr-only">{labels.rowNumber}</span>
+      ) : (
+        (label ?? '')
+      )}
     </div>
   );
 }

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /** Keyed by row + column so two cells in the same row are independent. */
 export function cellStatusKey(rowId: string, columnId: string) {
@@ -231,17 +233,31 @@ export function useCellStatus() {
     [rejectedValues],
   );
 
-  return {
-    statuses,
-    rejectedCellValue,
-    rejectCellValue,
-    rejectFieldErrors,
-    abandonCellValueChange,
-    clearCellStatus,
-    setCellDirty,
-    setCellSaving,
-    setCellSaved,
-  };
+  // Stable while nothing changes, so a Sheet can skip re-rendering its rows.
+  return useMemo(
+    () => ({
+      statuses,
+      rejectedCellValue,
+      rejectCellValue,
+      rejectFieldErrors,
+      abandonCellValueChange,
+      clearCellStatus,
+      setCellDirty,
+      setCellSaving,
+      setCellSaved,
+    }),
+    [
+      statuses,
+      rejectedCellValue,
+      rejectCellValue,
+      rejectFieldErrors,
+      abandonCellValueChange,
+      clearCellStatus,
+      setCellDirty,
+      setCellSaving,
+      setCellSaved,
+    ],
+  );
 }
 
 export type CellStatusState = ReturnType<typeof useCellStatus>;

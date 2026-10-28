@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CellStatusState } from './use-cell-status.js';
 
 /** Field edits staged for one row, keyed by column id. */
@@ -229,6 +229,10 @@ export function useRowChanges({
    * outcome; under a debounce it resolves once staged, since the write is later
    * by design.
    */
+  // A number, so an inline `{ debounce }` object doesn't change identity on
+  // every render.
+  const debounceMs = flush === 'immediate' ? null : flush.debounce;
+
   const stageCellValue = useCallback(
     (rowId: string, columnId: string, value: unknown) => {
       writeStaged(rowId, {
@@ -236,7 +240,7 @@ export function useRowChanges({
         [columnId]: value,
       });
 
-      if (flush === 'immediate') {
+      if (debounceMs === null) {
         return flushRow(rowId);
       }
 
@@ -248,11 +252,11 @@ export function useRowChanges({
         setTimeout(() => {
           timers.current.delete(rowId);
           void flushRow(rowId);
-        }, flush.debounce),
+        }, debounceMs),
       );
       return Promise.resolve();
     },
-    [flush, flushRow, writeStaged],
+    [debounceMs, flushRow, writeStaged],
   );
 
   /** Drops staged edits for a cell — the row keeps anything else queued. */
@@ -287,13 +291,23 @@ export function useRowChanges({
     [flushRow],
   );
 
-  return {
-    stagedCellValue,
-    hasStagedChanges,
-    stageCellValue,
-    discardCellValue,
-    flushAll,
-  };
+  // Stable while nothing changes, so a Sheet can skip re-rendering its rows.
+  return useMemo(
+    () => ({
+      stagedCellValue,
+      hasStagedChanges,
+      stageCellValue,
+      discardCellValue,
+      flushAll,
+    }),
+    [
+      stagedCellValue,
+      hasStagedChanges,
+      stageCellValue,
+      discardCellValue,
+      flushAll,
+    ],
+  );
 }
 
 export type RowChangesState = ReturnType<typeof useRowChanges>;

@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { RtlContext } from './direction';
 import { AddRowDemo } from './demos/add-row-demo';
 import { EditingDemo } from './demos/editing-demo';
 import { LargeDemo } from './demos/large-demo';
@@ -33,6 +34,28 @@ function Demo({
   );
 }
 
+function RtlToggle({
+  rtl,
+  onChange,
+}: {
+  rtl: boolean;
+  onChange: (rtl: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={rtl}
+      onClick={() => {
+        document.documentElement.dir = rtl ? 'ltr' : 'rtl';
+        onChange(!rtl);
+      }}
+      className="rounded-md border border-zinc-950/10 px-3 py-1.5 text-sm hover:bg-zinc-950/5 dark:border-white/15 dark:hover:bg-white/10"
+    >
+      Right to left
+    </button>
+  );
+}
+
 function DarkModeToggle() {
   const [dark, setDark] = useState(false);
   return (
@@ -51,57 +74,63 @@ function DarkModeToggle() {
 }
 
 export function App() {
+  const [rtl, setRtl] = useState(false);
   return (
-    <div className="min-h-svh bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
-      <header className="flex items-center justify-between border-b border-zinc-950/10 px-8 py-4 dark:border-white/10">
-        <h1 className="text-lg font-semibold">Sheets playground</h1>
-        <DarkModeToggle />
-      </header>
-      <main className="mx-auto max-w-5xl space-y-12 px-8 py-10">
-        <Demo
-          id="sorting"
-          title="Sorting and row actions"
-          description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Hover a row for its open and detail-page actions."
-        >
-          <SortingDemo />
-        </Demo>
-        <Demo
-          id="editing"
-          title="Inline editing"
-          description={
-            <>
-              Click a title or owner to edit. A row&apos;s edits are batched
-              into one save after a 600 ms pause. Type <code>taken</code> as a
-              title to have it refused, or <code>offline</code> anywhere for a
-              network error.
-            </>
-          }
-        >
-          <EditingDemo />
-        </Demo>
-        <Demo
-          id="adding-rows"
-          title="Adding rows"
-          description="The footer adds a task, then highlights it and scrolls it into view."
-        >
-          <AddRowDemo />
-        </Demo>
-        <Demo
-          id="states"
-          title="Loading and empty states"
-          description="The built-in skeleton and empty row."
-        >
-          <StatesDemo />
-        </Demo>
-        <Demo
-          id="large"
-          title="1,000 rows"
-          description="Sorted in the browser, the default. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
-        >
-          <LargeDemo />
-        </Demo>
-      </main>
-    </div>
+    <RtlContext.Provider value={rtl}>
+      <div className="min-h-svh bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
+        <header className="flex items-center justify-between border-b border-zinc-950/10 px-8 py-4 dark:border-white/10">
+          <h1 className="text-lg font-semibold">Sheets playground</h1>
+          <div className="flex gap-2">
+            <RtlToggle rtl={rtl} onChange={setRtl} />
+            <DarkModeToggle />
+          </div>
+        </header>
+        <main className="mx-auto max-w-5xl space-y-12 px-8 py-10">
+          <Demo
+            id="sorting"
+            title="Sorting and row actions"
+            description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Hover a row for its open and detail-page actions."
+          >
+            <SortingDemo />
+          </Demo>
+          <Demo
+            id="editing"
+            title="Inline editing"
+            description={
+              <>
+                Click a title or owner to edit. A row&apos;s edits are batched
+                into one save after a 600 ms pause. Type <code>taken</code> as a
+                title to have it refused, or <code>offline</code> anywhere for a
+                network error.
+              </>
+            }
+          >
+            <EditingDemo />
+          </Demo>
+          <Demo
+            id="adding-rows"
+            title="Adding rows"
+            description="The footer adds a task, then highlights it and scrolls it into view."
+          >
+            <AddRowDemo />
+          </Demo>
+          <Demo
+            id="states"
+            title="Loading and empty states"
+            description="The built-in skeleton and empty row."
+          >
+            <StatesDemo />
+          </Demo>
+          <Demo
+            id="large"
+            title="1,000 rows"
+            description="Sorted in the browser, the default. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
+          >
+            <LargeDemo />
+          </Demo>
+        </main>
+      </div>
+    </RtlContext.Provider>
   );
 }
 

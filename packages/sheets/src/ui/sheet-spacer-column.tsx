@@ -16,8 +16,8 @@ export function SheetSpacerColumn({
       className={cx(
         'border-b',
         isHeader
-          ? 'border-b-zinc-950/10 dark:border-b-white/10'
-          : 'border-b-zinc-950/5 dark:border-b-white/5',
+          ? 'border-b-sheet-fg/10 dark:border-b-sheet-fg-dark/10'
+          : 'border-b-sheet-fg/5 dark:border-b-sheet-fg-dark/5',
         className,
       )}
     />

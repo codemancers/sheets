@@ -38,7 +38,7 @@ export function SheetLinkCell({
     <LinkComponent
       href={href}
       className={cx(
-        'block w-full truncate px-2 py-1.5 text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300',
+        'block w-full truncate px-2 py-1.5 text-sm text-sheet-link hover:text-sheet-link-hover dark:text-sheet-link-dark dark:hover:text-sheet-link-hover-dark',
         className,
       )}
     >
