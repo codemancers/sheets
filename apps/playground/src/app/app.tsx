@@ -73,7 +73,7 @@ function DarkModeToggle() {
   );
 }
 
-export function App() {
+function App() {
   const [rtl, setRtl] = useState(false);
   return (
     <RtlContext.Provider value={rtl}>
