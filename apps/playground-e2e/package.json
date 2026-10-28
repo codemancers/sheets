@@ -5,6 +5,9 @@
   "nx": {
     "implicitDependencies": [
       "@codemancers/playground"
+    ],
+    "tags": [
+      "type:e2e"
     ]
   }
 }
