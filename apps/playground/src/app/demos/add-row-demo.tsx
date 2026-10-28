@@ -9,7 +9,7 @@ const HIGHLIGHT_MS = 1500;
 export function AddRowDemo() {
   const [tasks, setTasks] = useState(() => makeTasks(3));
   const [highlighted, setHighlighted] = useState<string>();
-  const columns = useMemo(() => taskColumns(() => undefined), []);
+  const columns = useMemo(() => taskColumns(), []);
   const sheet = useSheet({ columns, data: tasks, getRowId: (task) => task.id });
 
   // The Sheet highlights and scrolls to the row; clearing it is up to us.

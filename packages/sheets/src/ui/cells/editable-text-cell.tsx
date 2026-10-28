@@ -22,15 +22,18 @@ export type SheetEditableTextCellProps = {
    * with nothing on screen to explain why is worse than not checking.
    */
   schema?: SheetCellValidator;
+  /**
+   * Hand committed values to the Sheet's row buffer (`useRowChanges`) instead
+   * of `onCommit`, the way `SheetPrimaryCell` does, so they join the row's
+   * write. Off by default: a commit can mean *create* (an unsaved new row), and
+   * staging that would patch a row that does not exist yet.
+   */
+  stage?: boolean;
 };
 
 /**
- * Generic click-to-edit text cell.
- *
- * Unlike `SheetPrimaryCell` this never stages into a row buffer, even when the
- * Sheet has one: its commit semantics belong to the caller. ProjectList uses it
- * for the unsaved new row, where committing *creates* a project rather than
- * patching one — staging that would try to update a row that has no id.
+ * Generic click-to-edit text cell. Commits go to `onCommit`, or to the
+ * Sheet's row buffer with `stage`.
  */
 export function SheetEditableTextCell({
   value,
@@ -40,9 +43,12 @@ export function SheetEditableTextCell({
   className,
   autoFocus = false,
   schema,
+  stage = false,
 }: SheetEditableTextCellProps) {
   const cell = useSheetCellEditing(schema);
-  const displayValue = cell.refusedValue ?? value ?? '';
+  const staging = stage && cell.canStage;
+  const pending = (staging ? cell.stagedValue : undefined) ?? cell.refusedValue;
+  const displayValue = pending ?? value ?? '';
 
   const commit = async (next: string) => {
     // Back to the saved value: nothing to send, and any refused value goes.
@@ -51,14 +57,16 @@ export function SheetEditableTextCell({
       return;
     }
     if (!cell.accepts(next)) return;
-    // Deliberately not staged, even when the Sheet has a row buffer: this cell's
-    // commit may mean create rather than update.
+    if (staging) {
+      await cell.stage(next);
+      return;
+    }
     await onCommit?.(next);
   };
 
   const { isEditing, beginEdit, inputProps } = useInlineEdit<string>({
     value: displayValue,
-    dirty: cell.refusedValue !== undefined,
+    dirty: pending !== undefined,
     onCommit: commit,
     onCancel: () => {
       cell.abandon();

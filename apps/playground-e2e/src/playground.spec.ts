@@ -93,7 +93,19 @@ test.describe('inline editing', () => {
     await expect(row.getByRole('status')).toHaveCount(0);
   });
 
-  test('reports a failed per-cell save on that cell', async ({ page }) => {
+  test("batches a row's edits into one save", async ({ page }) => {
+    const row = dataRow(page, region, 4);
+    await row.getByRole('button', { name: 'Asha' }).click();
+    await row.getByRole('textbox').fill('Meera');
+    await row.getByRole('textbox').press('Enter');
+    await row.getByRole('button', { name: 'Review the README' }).click();
+    await row.getByRole('textbox').fill('Review the docs');
+    await row.getByRole('textbox').press('Enter');
+
+    await expect(row.getByRole('status')).toHaveText(['Saved', 'Saved']);
+  });
+
+  test('reports a network failure on the cell it sent', async ({ page }) => {
     const row = dataRow(page, region, 0);
     const owner = row.getByRole('cell').nth(1);
     await owner.getByRole('button').click();
@@ -123,8 +135,15 @@ test('shows loading and empty states', async ({ page }) => {
   await expect(region.getByRole('row')).toHaveCount(5);
 });
 
-test('renders 1,000 rows', async ({ page }) => {
-  await expect(demo(page, '1,000 rows').getByRole('row')).toHaveCount(1001);
+test('sorts 1,000 rows in the browser', async ({ page }) => {
+  const region = demo(page, '1,000 rows');
+  await expect(region.getByRole('row')).toHaveCount(1001);
+
+  await region.getByRole('button', { name: 'Sort Title' }).click();
+
+  await expect(
+    dataRow(page, '1,000 rows', 0).getByRole('link').first(),
+  ).toHaveText('Accessibility pass');
 });
 
 test('dark mode follows the toggle', async ({ page }) => {

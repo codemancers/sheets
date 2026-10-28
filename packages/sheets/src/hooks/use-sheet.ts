@@ -3,6 +3,7 @@ import {
   useReactTable,
   type ColumnDef,
   type Table,
+  type TableOptions,
 } from '@tanstack/react-table';
 import { useMemo } from 'react';
 import { toTanStackColumn } from './define-sheet-column.js';
@@ -32,6 +33,13 @@ export type UseSheetOptions<TData> = {
    * cell performing its own write through its `onCommit`.
    */
   rowChanges?: RowChangesState;
+  /**
+   * Any other TanStack Table option, applied last. Sorting, filtering and
+   * pagination are manual by default (the server does them); for local data,
+   * sort in the browser with
+   * `{ manualSorting: false, getSortedRowModel: getSortedRowModel() }`.
+   */
+  tableOptions?: Partial<TableOptions<TData>>;
 } & SheetStateChange;
 
 const DEFAULT_ROW_HEIGHT = 32;
@@ -54,6 +62,7 @@ export function useSheet<TData>({
   getRowId,
   cellStatus,
   rowChanges,
+  tableOptions,
   ...stateChange
 }: UseSheetOptions<TData>) {
   const tanstackColumns = useMemo<ColumnDef<TData, unknown>[]>(
@@ -76,6 +85,7 @@ export function useSheet<TData>({
     ...defined(stateChange),
     getCoreRowModel: getCoreRowModel(),
     getRowId,
+    ...tableOptions,
   });
 
   return { table, rowHeight, columns, cellStatus, rowChanges };

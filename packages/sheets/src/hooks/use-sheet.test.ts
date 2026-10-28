@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { SortingState } from '@tanstack/react-table';
+import { getSortedRowModel, type SortingState } from '@tanstack/react-table';
 import { defineSheetColumn } from './define-sheet-column.js';
 import { useSheet } from './use-sheet.js';
 
@@ -74,5 +74,24 @@ describe('useSheet', () => {
         { id: 'name', desc: true },
       ]);
     });
+  });
+
+  it('applies extra TanStack options, such as client-side sorting', () => {
+    const { result } = renderHook(() =>
+      useSheet({
+        columns,
+        data,
+        tableOptions: {
+          manualSorting: false,
+          getSortedRowModel: getSortedRowModel(),
+        },
+      }),
+    );
+
+    act(() => result.current.table.getColumn('name')?.toggleSorting(false));
+
+    expect(
+      result.current.table.getRowModel().rows.map((row) => row.original.name),
+    ).toEqual(['a', 'b']);
   });
 });
