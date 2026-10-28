@@ -1,5 +1,9 @@
 packages:
   - 'apps/*'
-  - 'packages/api/products'
-  - 'packages/shared/*'
-  - 'packages/shop/*'
+  - 'packages/*'
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  esbuild: true
+  nx: true
+  unrs-resolver: true
