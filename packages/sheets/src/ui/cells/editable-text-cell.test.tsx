@@ -43,6 +43,23 @@ describe('SheetEditableTextCell', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
+  // Japanese, Chinese and Korean input confirm a composition with Enter.
+  it('ignores Enter while an IME composition is in progress', () => {
+    const { onCommit } = renderCell();
+
+    const input = screen.getByDisplayValue('Project One');
+    fireEvent.change(input, { target: { value: 'プロジェクト' } });
+    fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+    // Safari reports the confirming keydown as keyCode 229 instead.
+    fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.getByDisplayValue('プロジェクト')).toBeTruthy();
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onCommit).toHaveBeenCalledWith('プロジェクト');
+  });
+
   it('discards the draft on Escape', () => {
     const { onCommit, onCancel } = renderCell();
 
@@ -139,6 +156,35 @@ describe('SheetEditableTextCell', () => {
 
       expect(screen.getByTestId('status').textContent).toBe('{}');
       expect(screen.getByRole('textbox')).toHaveProperty('value', '');
+    });
+
+    // Confirming the refused text unchanged is a retry, not a no-op that
+    // closes the editor as if the value had been saved.
+    it('checks a refused value again when it is committed unchanged', () => {
+      render(<Harness onCommit={vi.fn()} />);
+
+      editTo('');
+      fireEvent.click(screen.getByRole('button', { name: 'Enter a title...' }));
+      fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+
+      expect(screen.getByTestId('status').textContent).toContain(
+        'Title is required',
+      );
+    });
+
+    it('drops a refused value when the edit goes back to the saved one', () => {
+      const onCommit = vi.fn();
+      render(<Harness onCommit={onCommit} />);
+
+      editTo('');
+      fireEvent.click(screen.getByRole('button', { name: 'Enter a title...' }));
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: 'Task Seven' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(onCommit).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Task Seven' })).toBeTruthy();
+      expect(screen.getByTestId('status').textContent).toBe('{}');
     });
 
     // Outside a Sheet there is nowhere to report to, so silently swallowing the

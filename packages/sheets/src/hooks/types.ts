@@ -3,6 +3,7 @@ import type {
   CellContext,
   ColumnFiltersState,
   ColumnSizingState,
+  OnChangeFn,
   PaginationState,
   SortingState,
   VisibilityState,
@@ -44,11 +45,16 @@ export type SheetState = {
   rowHeight?: number;
 };
 
+/**
+ * Change handlers for controlled state. TanStack calls them with an updater,
+ * which may be a function of the previous state; a React state setter accepts
+ * both forms as is.
+ */
 export type SheetStateChange = {
-  onSortingChange?: (state: SortingState) => void;
-  onColumnFiltersChange?: (state: ColumnFiltersState) => void;
-  onPaginationChange?: (state: PaginationState) => void;
-  onColumnSizingChange?: (state: ColumnSizingState) => void;
-  onColumnOrderChange?: (state: string[]) => void;
-  onColumnVisibilityChange?: (state: VisibilityState) => void;
+  onSortingChange?: OnChangeFn<SortingState>;
+  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  onColumnSizingChange?: OnChangeFn<ColumnSizingState>;
+  onColumnOrderChange?: OnChangeFn<string[]>;
+  onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
 };

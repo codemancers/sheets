@@ -1,4 +1,4 @@
-import { flexRender, type Row } from '@tanstack/react-table';
+import type { CellContext, Row } from '@tanstack/react-table';
 import { cx } from './cx.js';
 import { useEffect, useRef } from 'react';
 import { SheetCell } from './sheet-cell.js';
@@ -19,6 +19,21 @@ export type SheetRowProps<TData> = {
   cellStatus?: CellStatusState;
   rowChanges?: RowChangesState;
 };
+
+/**
+ * Calls the column's cell renderer inside a component whose type never
+ * changes. TanStack's flexRender uses the renderer itself as the component
+ * type, so columns rebuilt on a render (an inline array, or a memo whose deps
+ * changed) remounted every cell and closed any open editor.
+ */
+function SheetCellContent<TData>({
+  context,
+}: {
+  context: CellContext<TData, unknown>;
+}) {
+  const render = context.column.columnDef.cell;
+  return typeof render === 'function' ? render(context) : render;
+}
 
 export function SheetRow<TData>({
   row,
@@ -68,7 +83,7 @@ export function SheetRow<TData>({
           rowChanges={rowChanges}
           status={cellStatus?.statuses[cellStatusKey(row.id, cell.column.id)]}
         >
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          <SheetCellContent context={cell.getContext()} />
         </SheetCell>
       ))}
       <SheetSpacerColumn />

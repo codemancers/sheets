@@ -3,7 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SheetPrimaryCell } from './primary-cell.js';
 import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
-import { useRowChanges } from '../../hooks/use-row-changes.js';
+import {
+  useRowChanges,
+  type RowSubmitResult,
+} from '../../hooks/use-row-changes.js';
 
 const renderCell = (onOpenDrawer = vi.fn()) => {
   render(
@@ -357,7 +360,10 @@ describe('SheetPrimaryCell', () => {
     function StagedHarness({
       onSubmitRow,
     }: {
-      onSubmitRow: (rowId: string, changes: Record<string, string>) => void;
+      onSubmitRow: (
+        rowId: string,
+        changes: Record<string, string>,
+      ) => RowSubmitResult | Promise<RowSubmitResult>;
     }) {
       const cellStatus = useCellStatus();
       const rowChanges = useRowChanges({
@@ -413,6 +419,53 @@ describe('SheetPrimaryCell', () => {
         ),
       );
       expect(onSubmitRow).not.toHaveBeenCalled();
+    });
+
+    const refused = {
+      error: 'Name taken',
+      fieldErrors: { name: ['Name taken'] },
+    };
+
+    it('re-sends a refused value committed unchanged', async () => {
+      const onSubmitRow = vi
+        .fn()
+        .mockResolvedValueOnce(refused)
+        .mockResolvedValueOnce(undefined);
+      render(<StagedHarness onSubmitRow={onSubmitRow} />);
+
+      editTo('Taken');
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'Name taken',
+        ),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Taken' }));
+      fireEvent.keyDown(screen.getByDisplayValue('Taken'), { key: 'Enter' });
+
+      await waitFor(() => expect(onSubmitRow).toHaveBeenCalledTimes(2));
+      expect(onSubmitRow).toHaveBeenLastCalledWith('7', { name: 'Taken' });
+    });
+
+    it('drops a refused value when the edit goes back to the saved one', async () => {
+      const onSubmitRow = vi.fn().mockResolvedValue(refused);
+      render(<StagedHarness onSubmitRow={onSubmitRow} />);
+
+      editTo('Taken');
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'Name taken',
+        ),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Taken' }));
+      const input = screen.getByDisplayValue('Taken');
+      fireEvent.change(input, { target: { value: 'Project Seven' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(onSubmitRow).toHaveBeenCalledTimes(1);
+      expect(
+        screen.getByRole('button', { name: 'Project Seven' }),
+      ).toBeTruthy();
+      expect(screen.getByTestId('status').textContent).toBe('{}');
     });
 
     it('submits a value that passes, without a per-cell onCommit', async () => {

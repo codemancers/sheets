@@ -14,6 +14,11 @@ export type UseSheetOptions<TData> = {
   columns: SheetColumn<TData>[];
   data: TData[];
   pageCount?: number;
+  /**
+   * The table state the app controls, each key paired with its change
+   * handler. Keys left out are managed by the sheet, so an app that does not
+   * care about column widths still gets working resize handles.
+   */
   state?: SheetState;
   getRowId?: (row: TData, index: number) => string;
   /**
@@ -31,25 +36,31 @@ export type UseSheetOptions<TData> = {
 
 const DEFAULT_ROW_HEIGHT = 32;
 
+/**
+ * Drops undefined entries. TanStack spreads options over its defaults, so an
+ * explicit `undefined` would replace the internal state or its updater.
+ */
+function defined<T extends object>(values: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(values).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
+}
+
 export function useSheet<TData>({
   columns,
   data,
   pageCount,
   state = {},
-  onSortingChange,
-  onColumnFiltersChange,
-  onPaginationChange,
-  onColumnSizingChange,
-  onColumnOrderChange,
-  onColumnVisibilityChange,
   getRowId,
   cellStatus,
   rowChanges,
+  ...stateChange
 }: UseSheetOptions<TData>) {
   const tanstackColumns = useMemo<ColumnDef<TData, unknown>[]>(
     () => columns.map((col) => toTanStackColumn(col)),
     [columns],
   );
+  const { rowHeight = DEFAULT_ROW_HEIGHT, ...tableState } = state;
 
   const table: Table<TData> = useReactTable<TData>({
     data,
@@ -60,25 +71,12 @@ export function useSheet<TData>({
     manualPagination: true,
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
-    state: {
-      sorting: state.sorting ?? [],
-      columnFilters: state.columnFilters ?? [],
-      pagination: state.pagination ?? { pageIndex: 0, pageSize: 50 },
-      columnSizing: state.columnSizing ?? {},
-      columnOrder: state.columnOrder ?? [],
-      columnVisibility: state.columnVisibility ?? {},
-    },
-    onSortingChange: onSortingChange as never,
-    onColumnFiltersChange: onColumnFiltersChange as never,
-    onPaginationChange: onPaginationChange as never,
-    onColumnSizingChange: onColumnSizingChange as never,
-    onColumnOrderChange: onColumnOrderChange as never,
-    onColumnVisibilityChange: onColumnVisibilityChange as never,
+    initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
+    state: defined(tableState),
+    ...defined(stateChange),
     getCoreRowModel: getCoreRowModel(),
     getRowId,
   });
-
-  const rowHeight = state.rowHeight ?? DEFAULT_ROW_HEIGHT;
 
   return { table, rowHeight, columns, cellStatus, rowChanges };
 }

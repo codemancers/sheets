@@ -114,10 +114,17 @@ export function SheetPrimaryCell({
 }: SheetPrimaryCellProps) {
   const cell = useSheetCellEditing(editable?.schema);
   const refused = cell.refusedValue;
-  const value = cell.stagedValue ?? refused ?? editable?.value ?? '';
+  const pending = cell.stagedValue ?? refused;
+  const value = pending ?? editable?.value ?? '';
 
   const commit = async (next: string) => {
     if (!editable) return;
+    // Back to the saved value: nothing to send, and any refused or staged
+    // value goes.
+    if (next === editable.value) {
+      cell.abandon();
+      return;
+    }
     if (!cell.accepts(next)) return;
     // Staged when the Sheet owns submission, so several fields can go in one
     // write; otherwise the cell's own handler performs it.
@@ -130,6 +137,7 @@ export function SheetPrimaryCell({
 
   const { isEditing, beginEdit, inputProps } = useInlineEdit<string>({
     value,
+    dirty: pending !== undefined,
     onCommit: commit,
     onCancel: () => {
       cell.abandon();
