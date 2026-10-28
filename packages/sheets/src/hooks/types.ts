@@ -47,7 +47,7 @@ export type SheetCellValidator = {
     value: unknown,
   ) =>
     | { success: true }
-    | { success: false; error?: { issues?: { message?: string }[] } };
+    | { success: false; error?: { issues?: readonly { message?: string }[] } };
 };
 
 export type SheetSelectOption = {
