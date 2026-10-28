@@ -16,6 +16,8 @@ import type { RowChangesState } from './use-row-changes.js';
 export type SheetCellScope = {
   rowId: string;
   columnId: string;
+  /** The column's header text, which names the cell's editor. */
+  columnLabel?: string;
   cellStatus?: CellStatusState;
   /**
    * Present when the Sheet stages writes rather than letting each cell perform

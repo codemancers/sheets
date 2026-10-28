@@ -84,9 +84,13 @@ export function SheetRow<TData>({
         <SheetCell
           key={cell.id}
           isFirstCol={idx === 0}
-          isLastCol={false}
           rowId={row.id}
           columnId={cell.column.id}
+          columnLabel={
+            typeof cell.column.columnDef.header === 'string'
+              ? cell.column.columnDef.header
+              : cell.column.id
+          }
           cellStatus={cellStatus}
           rowChanges={rowChanges}
           status={cellStatus?.statuses[cellStatusKey(row.id, cell.column.id)]}

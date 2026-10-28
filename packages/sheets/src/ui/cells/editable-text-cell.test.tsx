@@ -61,6 +61,14 @@ describe('SheetEditableTextCell', () => {
     expect(onCommit).toHaveBeenCalledWith('プロジェクト');
   });
 
+  it('focuses the editor as soon as it opens', () => {
+    render(<SheetEditableTextCell value="Project One" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Project One' }));
+
+    expect(document.activeElement).toBe(screen.getByRole('textbox'));
+  });
+
   it('discards the draft on Escape', () => {
     const { onCommit, onCancel } = renderCell();
 

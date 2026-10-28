@@ -153,8 +153,9 @@ export function useRowChanges({
           const result = await submitRef.current(rowId, changes);
 
           if (result && result.error) {
-            const mapped = result.fieldErrors
-              ? status.rejectFieldErrors(rowId, result.fieldErrors, {
+            const { fieldErrors } = result;
+            const mapped = fieldErrors
+              ? status.rejectFieldErrors(rowId, fieldErrors, {
                   values: changes,
                   columnIds,
                 })
@@ -162,10 +163,7 @@ export function useRowChanges({
 
             // Nothing attributable, or attributed somewhere with no column: the
             // message still has to land, so it goes on the fields we sent.
-            if (
-              !result.fieldErrors ||
-              Object.keys(mapped.unmapped).length > 0
-            ) {
+            if (!fieldErrors || Object.keys(mapped.unmapped).length > 0) {
               columnIds.forEach((columnId) =>
                 status.rejectCellValue(
                   rowId,
@@ -178,7 +176,7 @@ export function useRowChanges({
               // Attributed to a subset, but the whole write was refused, so the
               // rest are unsaved too — dirty, without claiming a reason.
               columnIds
-                .filter((columnId) => !(columnId in result.fieldErrors!))
+                .filter((columnId) => !(columnId in fieldErrors))
                 .forEach((columnId) => status.setCellDirty(rowId, columnId));
             }
             return;

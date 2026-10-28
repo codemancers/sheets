@@ -64,22 +64,24 @@ export function SheetEditableTextCell({
     await onCommit?.(next);
   };
 
-  const { isEditing, beginEdit, inputProps } = useInlineEdit<string>({
-    value: displayValue,
-    dirty: pending !== undefined,
-    onCommit: commit,
-    onCancel: () => {
-      cell.abandon();
-      onCancel?.();
-    },
-    autoFocus,
-  });
+  const { isEditing, beginEdit, triggerRef, inputProps } =
+    useInlineEdit<string>({
+      value: displayValue,
+      dirty: pending !== undefined,
+      onCommit: commit,
+      onCancel: () => {
+        cell.abandon();
+        onCancel?.();
+      },
+      autoFocus,
+    });
 
   if (isEditing) {
     return (
       <input
         type="text"
         placeholder={placeholder}
+        aria-label={cell.label}
         {...inputProps}
         className={cx(
           'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-zinc-950 outline-none focus:outline-none dark:text-white',
@@ -91,6 +93,7 @@ export function SheetEditableTextCell({
 
   return (
     <button
+      ref={triggerRef}
       type="button"
       onClick={() => {
         cell.clearOnEditStart();

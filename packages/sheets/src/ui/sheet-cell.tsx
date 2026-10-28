@@ -9,10 +9,11 @@ export type SheetCellProps = {
   children?: ReactNode;
   className?: string;
   isFirstCol?: boolean;
-  isLastCol?: boolean;
   /** Identifies this cell to whatever is rendered inside it. */
   rowId?: string;
   columnId?: string;
+  /** The column's header text, which names the cell's editor. */
+  columnLabel?: string;
   /** The whole status state, so a cell can report on itself. */
   cellStatus?: CellStatusState;
   /** Staging buffer, when the Sheet submits per row rather than per cell. */
@@ -31,10 +32,10 @@ export function SheetCell({
   children,
   className,
   isFirstCol,
-  isLastCol,
   status,
   rowId,
   columnId,
+  columnLabel,
   cellStatus,
   rowChanges,
 }: SheetCellProps) {
@@ -43,7 +44,6 @@ export function SheetCell({
       role="cell"
       className={cx(
         'flex items-center border-r border-b border-r-zinc-950/5 border-b-zinc-950/5 dark:border-r-white/5 dark:border-b-white/5',
-        isLastCol && 'border-r-0',
         isFirstCol && 'border-l border-l-zinc-950/5 dark:border-l-white/5',
         // Cell content truncates itself, so dropping the clip while a status is
         // showing is safe — and necessary, or the error popover is cut off.
@@ -52,7 +52,9 @@ export function SheetCell({
       )}
     >
       {rowId != null && columnId != null ? (
-        <SheetCellProvider value={{ rowId, columnId, cellStatus, rowChanges }}>
+        <SheetCellProvider
+          value={{ rowId, columnId, columnLabel, cellStatus, rowChanges }}
+        >
           {children}
         </SheetCellProvider>
       ) : (

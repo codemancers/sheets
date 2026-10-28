@@ -146,27 +146,24 @@ export function SheetPrimaryCell({
     await editable.onCommit?.(next);
   };
 
-  const { isEditing, beginEdit, inputProps } = useInlineEdit<string>({
-    value,
-    dirty: pending !== undefined,
-    onCommit: commit,
-    onCancel: () => {
-      cell.abandon();
-      editable?.onCancel?.();
-    },
-  });
+  const { isEditing, beginEdit, triggerRef, inputProps } =
+    useInlineEdit<string>({
+      value,
+      dirty: pending !== undefined,
+      onCommit: commit,
+      onCancel: () => {
+        cell.abandon();
+        editable?.onCancel?.();
+      },
+    });
 
   if (editable && isEditing) {
     return (
       <input
         type="text"
         placeholder={editable.placeholder}
+        aria-label={cell.label}
         {...inputProps}
-        // Overrides inputProps: useInlineEdit's autoFocus also decides whether
-        // the cell *starts* in edit mode, which must stay false here. This input
-        // only exists once the user has opened it, so focusing it is always
-        // right — without this, clicking the name needs a second click to type.
-        autoFocus
         className={cx(
           'w-full border-0 bg-transparent px-2 py-1.5 text-sm text-zinc-950 outline-none focus:outline-none dark:text-white',
           className,
@@ -182,6 +179,7 @@ export function SheetPrimaryCell({
         // blue would promise navigation. `cursor-text` is the tell, same as
         // SheetEditableTextCell.
         <button
+          ref={triggerRef}
           type="button"
           onClick={() => {
             cell.clearOnEditStart();
