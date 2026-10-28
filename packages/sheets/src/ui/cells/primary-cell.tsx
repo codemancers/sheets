@@ -123,9 +123,9 @@ export function SheetPrimaryCell({
   editable,
 }: SheetPrimaryCellProps) {
   const cell = useSheetCellEditing(editable?.schema);
-  const refused = cell.refusedValue;
-  const pending = cell.stagedValue ?? refused;
-  const value = pending ?? editable?.value ?? '';
+  const pending = cell.stagedValue ?? cell.refusedValue;
+  const value =
+    pending === undefined ? (editable?.value ?? '') : String(pending);
 
   const commit = async (next: string) => {
     if (!editable) return;
@@ -135,7 +135,8 @@ export function SheetPrimaryCell({
       cell.abandon();
       return;
     }
-    if (!cell.accepts(next)) return;
+    const verdict = cell.accepts(next);
+    if (!(typeof verdict === 'boolean' ? verdict : await verdict)) return;
     // Staged when the Sheet owns submission, so several fields can go in one
     // write; otherwise the cell's own handler performs it.
     if (cell.canStage) {
@@ -195,8 +196,8 @@ export function SheetPrimaryCell({
             <span className="text-zinc-400 dark:text-zinc-500">
               {editable.placeholder}
             </span>
-          ) : (cell.stagedValue ?? refused) !== undefined ? (
-            (cell.stagedValue ?? refused)
+          ) : pending !== undefined ? (
+            value
           ) : (
             children
           )}

@@ -96,13 +96,14 @@ describe('SheetEditableTextCell', () => {
   // SheetPrimaryCell. Reporting needs a Sheet, so the scope is provided here.
   describe('schema', () => {
     const required = {
-      safeParse: (value: unknown) =>
-        typeof value === 'string' && value.length > 0
-          ? ({ success: true } as const)
-          : ({
-              success: false,
-              error: { issues: [{ message: 'Title is required' }] },
-            } as const),
+      '~standard': {
+        version: 1 as const,
+        vendor: 'test',
+        validate: (value: unknown) =>
+          typeof value === 'string' && value.length > 0
+            ? { value }
+            : { issues: [{ message: 'Title is required' }] },
+      },
     };
 
     function Harness({ onCommit }: { onCommit: (v: string) => void }) {
@@ -196,6 +197,55 @@ describe('SheetEditableTextCell', () => {
       expect(screen.getByTestId('status').textContent).toBe('{}');
     });
 
+    // Standard Schema validators may answer asynchronously.
+    it('waits for an async rule before committing', async () => {
+      const onCommit = vi.fn();
+      const checkedLater = {
+        '~standard': {
+          version: 1 as const,
+          vendor: 'test',
+          validate: async (value: unknown) =>
+            value === 'Approved'
+              ? { value }
+              : { issues: [{ message: 'Not approved' }] },
+        },
+      };
+      function AsyncHarness() {
+        const cellStatus = useCellStatus();
+        return (
+          <div role="row">
+            <SheetCellProvider
+              value={{ rowId: '7', columnId: 'title', cellStatus }}
+            >
+              <SheetEditableTextCell
+                value="Task Seven"
+                onCommit={onCommit}
+                schema={checkedLater}
+              />
+            </SheetCellProvider>
+            <output data-testid="status">
+              {JSON.stringify(cellStatus.statuses)}
+            </output>
+          </div>
+        );
+      }
+      render(<AsyncHarness />);
+
+      editTo('Rejected');
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'Not approved',
+        ),
+      );
+      expect(onCommit).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rejected' }));
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: 'Approved' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(onCommit).toHaveBeenCalledWith('Approved'));
+    });
+
     // Outside a Sheet there is nowhere to report to, so silently swallowing the
     // commit would lose the edit with nothing on screen to explain it.
     it('passes the value through when rendered with no Sheet scope', () => {
@@ -225,7 +275,7 @@ describe('SheetEditableTextCell', () => {
     }: {
       stage?: boolean;
       onCommit: (next: string) => void;
-      onSubmitRow: (rowId: string, changes: Record<string, string>) => void;
+      onSubmitRow: (rowId: string, changes: Record<string, unknown>) => void;
     }) {
       const cellStatus = useCellStatus();
       const rowChanges = useRowChanges({ cellStatus, onSubmitRow });

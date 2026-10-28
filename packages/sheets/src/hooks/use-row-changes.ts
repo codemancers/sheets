@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CellStatusState } from './use-cell-status.js';
 
 /** Field edits staged for one row, keyed by column id. */
-export type RowChanges = Record<string, string>;
+export type RowChanges = Record<string, unknown>;
 
 /**
  * What a write reports back. `void` (or an object with no `error`) is success.
@@ -230,7 +230,7 @@ export function useRowChanges({
    * by design.
    */
   const stageCellValue = useCallback(
-    (rowId: string, columnId: string, value: string) => {
+    (rowId: string, columnId: string, value: unknown) => {
       writeStaged(rowId, {
         ...(stagedRef.current[rowId] ?? {}),
         [columnId]: value,

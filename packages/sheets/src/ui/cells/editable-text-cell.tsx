@@ -48,7 +48,7 @@ export function SheetEditableTextCell({
   const cell = useSheetCellEditing(schema);
   const staging = stage && cell.canStage;
   const pending = (staging ? cell.stagedValue : undefined) ?? cell.refusedValue;
-  const displayValue = pending ?? value ?? '';
+  const displayValue = pending === undefined ? (value ?? '') : String(pending);
 
   const commit = async (next: string) => {
     // Back to the saved value: nothing to send, and any refused value goes.
@@ -56,7 +56,8 @@ export function SheetEditableTextCell({
       cell.abandon();
       return;
     }
-    if (!cell.accepts(next)) return;
+    const verdict = cell.accepts(next);
+    if (!(typeof verdict === 'boolean' ? verdict : await verdict)) return;
     if (staging) {
       await cell.stage(next);
       return;

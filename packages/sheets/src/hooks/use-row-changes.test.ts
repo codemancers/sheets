@@ -14,7 +14,7 @@ const DESC = cellStatusKey('7', 'description');
 function setup(
   onSubmitRow: (
     rowId: string,
-    changes: Record<string, string>,
+    changes: Record<string, unknown>,
   ) => Promise<RowSubmitResult> | RowSubmitResult,
   flush: RowFlushPolicy = 'immediate',
 ) {
@@ -37,6 +37,18 @@ describe('useRowChanges', () => {
 
       expect(submit).toHaveBeenCalledTimes(1);
       expect(submit).toHaveBeenCalledWith('7', { name: 'Renamed' });
+    });
+
+    // A number, date or select cell stages its own value, not a string.
+    it('passes values of any type through unchanged', async () => {
+      const submit = vi.fn().mockResolvedValue(undefined);
+      const { result } = setup(submit);
+
+      await act(() =>
+        result.current.rowChanges.stageCellValue('7', 'estimate', 5),
+      );
+
+      expect(submit).toHaveBeenCalledWith('7', { estimate: 5 });
     });
 
     it('reports the tick and clears the staged value on success', async () => {
@@ -288,7 +300,7 @@ describe('useRowChanges', () => {
     const order: string[] = [];
     let releaseFirst: (() => void) | undefined;
     const submit = vi.fn(
-      async (_rowId: string, changes: Record<string, string>) => {
+      async (_rowId: string, changes: Record<string, unknown>) => {
         order.push(`start:${changes.name}`);
         if (changes.name === 'First') {
           await new Promise<void>((resolve) => {
