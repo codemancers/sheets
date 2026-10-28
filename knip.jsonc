@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Used, but out of knip's sight:
+  "ignoreDependencies": [
+    // loaded by the shared ESLint configs from @nx/eslint-plugin
+    "@eslint/js",
+    "typescript-eslint",
+    "eslint-plugin-import",
+    "eslint-plugin-jsx-a11y",
+    "eslint-plugin-react",
+    "eslint-plugin-react-hooks",
+    // run by `nx format`
+    "prettier",
+    // imported from the playground's CSS
+    "tailwindcss",
+  ],
+}
