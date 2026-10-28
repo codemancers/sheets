@@ -10,6 +10,7 @@
     "react-dom": "19.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.8.0",
     "@nx/devkit": "23.2.0",
     "@nx/eslint": "23.2.0",
@@ -24,6 +25,7 @@
     "@swc-node/register": "1.11.1",
     "@swc/core": "1.15.8",
     "@swc/helpers": "0.5.18",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "10.4.0",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "16.1.0",
@@ -45,6 +47,7 @@
     "jsonc-eslint-parser": "^2.1.0",
     "nx": "23.2.0",
     "prettier": "^3.8.1",
+    "tailwindcss": "^4.3.3",
     "tslib": "^2.3.0",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.40.0",

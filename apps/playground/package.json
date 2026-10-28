@@ -4,5 +4,8 @@
   "private": true,
   "nx": {
     "projectType": "application"
+  },
+  "dependencies": {
+    "@codemancers/sheets": "workspace:*"
   }
 }
