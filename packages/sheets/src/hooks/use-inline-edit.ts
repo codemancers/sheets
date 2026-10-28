@@ -12,6 +12,12 @@ export type UseInlineEditOptions<T> = {
   onCommit?: (next: T) => void | Promise<void>;
   onCancel?: () => void;
   autoFocus?: boolean;
+  /**
+   * The value shown is not saved yet (a refused or staged edit). Committing it
+   * unchanged then still calls onCommit: that is how a refused value is
+   * retried.
+   */
+  dirty?: boolean;
 };
 
 export function useInlineEdit<T extends string>({
@@ -19,6 +25,7 @@ export function useInlineEdit<T extends string>({
   onCommit,
   onCancel,
   autoFocus = false,
+  dirty = false,
 }: UseInlineEditOptions<T>) {
   const [draft, setDraft] = useState<T>(value);
   const [isEditing, setIsEditing] = useState(autoFocus);
@@ -38,10 +45,10 @@ export function useInlineEdit<T extends string>({
     if (committedRef.current) return;
     committedRef.current = true;
     setIsEditing(false);
-    if (draft !== value) {
+    if (dirty || draft !== value) {
       await onCommit?.(draft);
     }
-  }, [draft, value, onCommit]);
+  }, [draft, value, onCommit, dirty]);
 
   const cancel = useCallback(() => {
     if (committedRef.current) return;
@@ -53,6 +60,10 @@ export function useInlineEdit<T extends string>({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
+      // An IME (Japanese, Chinese, Korean input) confirms its composition
+      // with Enter; that keypress belongs to the IME, not the cell. Safari
+      // reports it as keyCode 229 rather than through isComposing.
+      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
       if (event.key === 'Enter') {
         event.preventDefault();
         void commit();

@@ -131,11 +131,14 @@ export function useRowChanges({
         timers.current.delete(rowId);
       }
 
-      // Wait out an existing flight, then re-read: anything staged meanwhile is
+      // Wait out any flight, then re-read: anything staged meanwhile is
       // included in this pass instead of overtaking the request ahead of it.
-      const running = inFlight.current.get(rowId);
-      if (running) {
+      // Loop, because another flush queued behind the same flight may have
+      // started the next one first.
+      let running = inFlight.current.get(rowId);
+      while (running) {
         await running;
+        running = inFlight.current.get(rowId);
       }
 
       const changes = stagedRef.current[rowId];

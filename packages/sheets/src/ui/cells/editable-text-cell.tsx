@@ -45,6 +45,11 @@ export function SheetEditableTextCell({
   const displayValue = cell.refusedValue ?? value ?? '';
 
   const commit = async (next: string) => {
+    // Back to the saved value: nothing to send, and any refused value goes.
+    if (next === value) {
+      cell.abandon();
+      return;
+    }
     if (!cell.accepts(next)) return;
     // Deliberately not staged, even when the Sheet has a row buffer: this cell's
     // commit may mean create rather than update.
@@ -53,6 +58,7 @@ export function SheetEditableTextCell({
 
   const { isEditing, beginEdit, inputProps } = useInlineEdit<string>({
     value: displayValue,
+    dirty: cell.refusedValue !== undefined,
     onCommit: commit,
     onCancel: () => {
       cell.abandon();

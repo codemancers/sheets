@@ -245,6 +245,45 @@ describe('useRowChanges', () => {
 
   // Two concurrent PATCHes for one row would land in arbitrary order, so the
   // later value could lose to the earlier one.
+  it('never runs two writes for one row at once, however many queue up', async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let releaseFirst: (() => void) | undefined;
+    const submit = vi.fn(async () => {
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      if (submit.mock.calls.length === 1) {
+        await new Promise<void>((resolve) => {
+          releaseFirst = resolve;
+        });
+      } else {
+        await Promise.resolve();
+      }
+      inFlight -= 1;
+      return undefined;
+    });
+    const { result } = setup(submit);
+
+    await act(async () => {
+      const { stageCellValue } = result.current.rowChanges;
+      const flushes = [
+        stageCellValue('7', 'name', 'First'),
+        // Both queue behind the first write while it is still in flight.
+        stageCellValue('7', 'name', 'Second'),
+        stageCellValue('7', 'description', 'Third'),
+      ];
+      releaseFirst?.();
+      await Promise.all(flushes);
+    });
+
+    expect(maxInFlight).toBe(1);
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit).toHaveBeenLastCalledWith('7', {
+      name: 'Second',
+      description: 'Third',
+    });
+  });
+
   it('serialises writes per row rather than racing them', async () => {
     const order: string[] = [];
     let releaseFirst: (() => void) | undefined;
