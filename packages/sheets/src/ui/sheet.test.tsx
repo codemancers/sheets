@@ -19,7 +19,6 @@ function TestSheet({
         id: 'name',
         header: 'Name',
         accessor: 'name',
-        type: 'text',
       }),
     ],
     data,

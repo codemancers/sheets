@@ -9,7 +9,6 @@ export function taskColumns(onOpen: (task: Task) => void) {
       id: 'title',
       header: 'Title',
       accessor: 'title',
-      type: 'text',
       width: 300,
       sortable: true,
       cell: ({ row }) => (
@@ -26,7 +25,6 @@ export function taskColumns(onOpen: (task: Task) => void) {
       id: 'status',
       header: 'Status',
       accessor: 'status',
-      type: 'text',
       cell: ({ getValue }) => (
         <SheetTextCell muted>{String(getValue())}</SheetTextCell>
       ),
@@ -35,7 +33,6 @@ export function taskColumns(onOpen: (task: Task) => void) {
       id: 'owner',
       header: 'Owner',
       accessor: 'owner',
-      type: 'text',
       sortable: true,
       cell: ({ getValue }) => (
         <SheetTextCell>{String(getValue())}</SheetTextCell>
@@ -45,7 +42,6 @@ export function taskColumns(onOpen: (task: Task) => void) {
       id: 'due',
       header: 'Due',
       accessor: 'due',
-      type: 'text',
       width: 120,
       sortable: true,
       cell: ({ getValue }) => (

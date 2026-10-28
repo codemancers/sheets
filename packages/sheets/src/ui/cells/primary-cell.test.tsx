@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { SheetPrimaryCell } from './primary-cell.js';
-import { SheetCellProvider } from '../cell-context.js';
+import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
 import { useRowChanges } from '../../hooks/use-row-changes.js';
 

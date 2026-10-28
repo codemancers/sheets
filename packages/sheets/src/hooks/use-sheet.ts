@@ -6,7 +6,6 @@ import {
 } from '@tanstack/react-table';
 import { useMemo } from 'react';
 import { toTanStackColumn } from './define-sheet-column.js';
-import { useAddRow, type UseAddRowOptions } from './use-add-row.js';
 import type { CellStatusState } from './use-cell-status.js';
 import type { RowChangesState } from './use-row-changes.js';
 import type { SheetColumn, SheetState, SheetStateChange } from './types.js';
@@ -16,7 +15,6 @@ export type UseSheetOptions<TData> = {
   data: TData[];
   pageCount?: number;
   state?: SheetState;
-  addRowOptions?: UseAddRowOptions<TData>;
   getRowId?: (row: TData, index: number) => string;
   /**
    * The whole `useCellStatus()` state. Not just the map: cells validate their
@@ -44,7 +42,6 @@ export function useSheet<TData>({
   onColumnSizingChange,
   onColumnOrderChange,
   onColumnVisibilityChange,
-  addRowOptions,
   getRowId,
   cellStatus,
   rowChanges,
@@ -81,11 +78,9 @@ export function useSheet<TData>({
     getRowId,
   });
 
-  const addRow = useAddRow<TData>(addRowOptions ?? {});
-
   const rowHeight = state.rowHeight ?? DEFAULT_ROW_HEIGHT;
 
-  return { table, addRow, rowHeight, columns, cellStatus, rowChanges };
+  return { table, rowHeight, columns, cellStatus, rowChanges };
 }
 
 export type SheetInstance<TData> = ReturnType<typeof useSheet<TData>>;

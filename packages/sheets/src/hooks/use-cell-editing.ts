@@ -1,7 +1,7 @@
 'use client';
 
 import type { SheetCellValidator } from './types.js';
-import { useSheetCellScope } from '../ui/cell-context.js';
+import { useSheetCellScope } from './cell-context.js';
 
 /**
  * The behaviour every editable cell shares once it is inside a Sheet: which

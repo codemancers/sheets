@@ -26,11 +26,11 @@ You need React 18.2+ or 19. The components also need Tailwind CSS v4; the headle
 
 ## Entry points
 
-| Import                           | Contents                                                                                                                         |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `@codemancers/sheets`            | Headless: `useSheet`, `defineSheetColumn`, `useCellStatus`, `useRowChanges`, `useInlineEdit`, types, and TanStack's `flexRender` |
-| `@codemancers/sheets/ui`         | Components: `Sheet`, plus cells such as `SheetTextCell`, `SheetPrimaryCell` and `SheetEditableTextCell`                          |
-| `@codemancers/sheets/styles.css` | The Tailwind v4 entry from Setup                                                                                                 |
+| Import                           | Contents                                                                                                                                              |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@codemancers/sheets`            | Headless: `useSheet`, `defineSheetColumn`, `useCellStatus`, `useRowChanges`, `useInlineEdit`, `useSheetCellScope`, types, and TanStack's `flexRender` |
+| `@codemancers/sheets/ui`         | Components: `Sheet`, plus cells such as `SheetTextCell`, `SheetPrimaryCell` and `SheetEditableTextCell`                                               |
+| `@codemancers/sheets/styles.css` | The Tailwind v4 entry from Setup                                                                                                                      |
 
 ## Example
 
@@ -48,12 +48,11 @@ type Task = { id: string; title: string; owner: string };
 export function TaskSheet({ tasks }: { tasks: Task[] }) {
   const columns = useMemo(
     () => [
-      defineSheetColumn<Task>({ id: 'title', header: 'Title', accessor: 'title', type: 'text', width: 280 }),
+      defineSheetColumn<Task>({ id: 'title', header: 'Title', accessor: 'title', width: 280 }),
       defineSheetColumn<Task>({
         id: 'owner',
         header: 'Owner',
         accessor: 'owner',
-        type: 'text',
         cell: ({ getValue }) => <SheetTextCell muted>{String(getValue())}</SheetTextCell>,
       }),
     ],
