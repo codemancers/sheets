@@ -61,7 +61,7 @@ export function App() {
         <Demo
           id="sorting"
           title="Sorting and row actions"
-          description="Sorting is controlled: the app sorts its own data, the way a server would. Hover a row for the drawer and detail-page actions."
+          description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Hover a row for its open and detail-page actions."
         >
           <SortingDemo />
         </Demo>
@@ -96,7 +96,7 @@ export function App() {
         <Demo
           id="large"
           title="1,000 rows"
-          description="Sorted in the browser: click a sortable header. There is no virtualization yet, so every row is rendered."
+          description="Sorted in the browser, the default. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
         >
           <LargeDemo />
         </Demo>

@@ -1,4 +1,4 @@
-import type { SortingState } from '@codemancers/sheets';
+import type { SortingState } from '@tanstack/react-table';
 
 export type Task = {
   id: string;

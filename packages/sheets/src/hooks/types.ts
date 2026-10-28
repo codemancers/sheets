@@ -1,14 +1,3 @@
-import type { ReactNode } from 'react';
-import type {
-  CellContext,
-  ColumnFiltersState,
-  ColumnSizingState,
-  OnChangeFn,
-  PaginationState,
-  SortingState,
-  VisibilityState,
-} from '@tanstack/react-table';
-
 /**
  * Validation rule for an editable cell — anything with zod's `safeParse` shape.
  *
@@ -23,38 +12,4 @@ export type SheetCellValidator = {
   ) =>
     | { success: true }
     | { success: false; error?: { issues?: readonly { message?: string }[] } };
-};
-
-export type SheetColumn<TData> = {
-  id: string;
-  header: string;
-  accessor?: keyof TData | ((row: TData) => unknown);
-  width?: number;
-  sortable?: boolean;
-  filterable?: boolean;
-  cell?: (ctx: CellContext<TData, unknown>) => ReactNode;
-};
-
-export type SheetState = {
-  sorting?: SortingState;
-  columnFilters?: ColumnFiltersState;
-  pagination?: PaginationState;
-  columnSizing?: ColumnSizingState;
-  columnOrder?: string[];
-  columnVisibility?: VisibilityState;
-  rowHeight?: number;
-};
-
-/**
- * Change handlers for controlled state. TanStack calls them with an updater,
- * which may be a function of the previous state; a React state setter accepts
- * both forms as is.
- */
-export type SheetStateChange = {
-  onSortingChange?: OnChangeFn<SortingState>;
-  onColumnFiltersChange?: OnChangeFn<ColumnFiltersState>;
-  onPaginationChange?: OnChangeFn<PaginationState>;
-  onColumnSizingChange?: OnChangeFn<ColumnSizingState>;
-  onColumnOrderChange?: OnChangeFn<string[]>;
-  onColumnVisibilityChange?: OnChangeFn<VisibilityState>;
 };

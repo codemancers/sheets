@@ -1,10 +1,6 @@
 import { useState } from 'react';
-import {
-  defineSheetColumn,
-  useCellStatus,
-  useRowChanges,
-  useSheet,
-} from '@codemancers/sheets';
+import { createColumnHelper } from '@tanstack/react-table';
+import { useCellStatus, useRowChanges, useSheet } from '@codemancers/sheets';
 import {
   Sheet,
   SheetEditableTextCell,
@@ -13,12 +9,12 @@ import {
 } from '@codemancers/sheets/ui';
 import { makeTasks, requiredTitle, saveTask, type Task } from '../data';
 
+const task = createColumnHelper<Task>();
+
 const columns = [
-  defineSheetColumn<Task>({
-    id: 'title',
+  task.accessor('title', {
     header: 'Title',
-    accessor: 'title',
-    width: 320,
+    size: 320,
     cell: ({ row }) => (
       <SheetPrimaryCell
         editable={{
@@ -31,11 +27,9 @@ const columns = [
       </SheetPrimaryCell>
     ),
   }),
-  defineSheetColumn<Task>({
-    id: 'owner',
+  task.accessor('owner', {
     header: 'Owner',
-    accessor: 'owner',
-    width: 220,
+    size: 220,
     cell: ({ row }) => (
       <SheetEditableTextCell
         value={row.original.owner}
@@ -44,13 +38,9 @@ const columns = [
       />
     ),
   }),
-  defineSheetColumn<Task>({
-    id: 'status',
+  task.accessor('status', {
     header: 'Status',
-    accessor: 'status',
-    cell: ({ getValue }) => (
-      <SheetTextCell muted>{String(getValue())}</SheetTextCell>
-    ),
+    cell: ({ getValue }) => <SheetTextCell muted>{getValue()}</SheetTextCell>,
   }),
 ];
 

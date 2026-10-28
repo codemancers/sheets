@@ -1,46 +1,50 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { getSortedRowModel, type SortingState } from '@tanstack/react-table';
-import { defineSheetColumn } from './define-sheet-column.js';
+import { createColumnHelper, type SortingState } from '@tanstack/react-table';
 import { useSheet } from './use-sheet.js';
 
 type Row = { id: string; name: string };
 
-const columns = [
-  defineSheetColumn<Row>({
-    id: 'name',
-    header: 'Name',
-    accessor: 'name',
-    sortable: true,
-  }),
-];
+const column = createColumnHelper<Row>();
+const columns = [column.accessor('name', { header: 'Name' })];
 const data: Row[] = [
   { id: '1', name: 'b' },
   { id: '2', name: 'a' },
 ];
+const names = (result: { current: ReturnType<typeof useSheet<Row>> }) =>
+  result.current.table.getRowModel().rows.map((row) => row.original.name);
 
 describe('useSheet', () => {
-  describe('state the app does not control', () => {
-    it('resizes columns', () => {
-      const { result } = renderHook(() => useSheet({ columns, data }));
+  it('sorts in the browser by default', () => {
+    const { result } = renderHook(() => useSheet({ columns, data }));
 
-      act(() => result.current.table.setColumnSizing({ name: 240 }));
+    act(() => result.current.table.getColumn('name')?.toggleSorting(false));
 
-      expect(result.current.table.getColumn('name')?.getSize()).toBe(240);
-    });
-
-    it('sorts', () => {
-      const { result } = renderHook(() => useSheet({ columns, data }));
-
-      act(() => result.current.table.getColumn('name')?.toggleSorting(false));
-
-      expect(result.current.table.getState().sorting).toEqual([
-        { id: 'name', desc: false },
-      ]);
-    });
+    expect(names(result)).toEqual(['a', 'b']);
   });
 
-  describe('state the app controls', () => {
+  it('leaves the data alone with manualSorting, for server-side sorting', () => {
+    const { result } = renderHook(() =>
+      useSheet({ columns, data, manualSorting: true }),
+    );
+
+    act(() => result.current.table.getColumn('name')?.toggleSorting(false));
+
+    expect(result.current.table.getState().sorting).toEqual([
+      { id: 'name', desc: false },
+    ]);
+    expect(names(result)).toEqual(['b', 'a']);
+  });
+
+  it('resizes columns without the app controlling sizing', () => {
+    const { result } = renderHook(() => useSheet({ columns, data }));
+
+    act(() => result.current.table.setColumnSizing({ name: 240 }));
+
+    expect(result.current.table.getColumn('name')?.getSize()).toBe(240);
+  });
+
+  describe('controlled state', () => {
     it('leaves the state to the app and reports the change', () => {
       const onSortingChange = vi.fn();
       const { result } = renderHook(() =>
@@ -74,24 +78,22 @@ describe('useSheet', () => {
         { id: 'name', desc: true },
       ]);
     });
-  });
 
-  it('applies extra TanStack options, such as client-side sorting', () => {
-    const { result } = renderHook(() =>
-      useSheet({
-        columns,
-        data,
-        tableOptions: {
-          manualSorting: false,
-          getSortedRowModel: getSortedRowModel(),
-        },
-      }),
-    );
+    // TanStack spreads options over its defaults, so an explicit undefined
+    // would knock out its own state handling.
+    it('ignores options passed as undefined', () => {
+      const { result } = renderHook(() =>
+        useSheet({
+          columns,
+          data,
+          onSortingChange: undefined,
+          state: { sorting: undefined },
+        }),
+      );
 
-    act(() => result.current.table.getColumn('name')?.toggleSorting(false));
+      act(() => result.current.table.getColumn('name')?.toggleSorting(false));
 
-    expect(
-      result.current.table.getRowModel().rows.map((row) => row.original.name),
-    ).toEqual(['a', 'b']);
+      expect(names(result)).toEqual(['a', 'b']);
+    });
   });
 });

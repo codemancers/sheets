@@ -35,10 +35,9 @@ export function AddRowDemo() {
   return (
     <Sheet
       instance={sheet}
-      showAddRow
       onAddRow={addRow}
       addRowLabel="Add task"
-      highlightedRowKey={highlighted}
+      highlightedRowId={highlighted}
     />
   );
 }

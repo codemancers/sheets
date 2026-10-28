@@ -5,7 +5,7 @@ import {
   FunnelIcon,
 } from './icons.js';
 import { cx } from './cx.js';
-import type { Header } from '@tanstack/react-table';
+import { flexRender, type Header } from '@tanstack/react-table';
 
 /** Pixels per arrow key on the resize handle; Shift moves five steps. */
 const RESIZE_STEP = 10;
@@ -22,10 +22,25 @@ export function SheetColumn<TData>({
   className,
 }: SheetColumnProps<TData>) {
   const column = header.column;
+  // Group headers span their leaf columns; empty slots above a leaf column
+  // that has no group (placeholders) render as blank header space.
+  const span =
+    header.colSpan > 1 ? { gridColumn: `span ${header.colSpan}` } : undefined;
+  const borders = cx(
+    'border-r border-b border-r-zinc-950/5 border-b-zinc-950/10 dark:border-r-white/5 dark:border-b-white/10',
+    isFirstCol && 'border-l border-l-zinc-950/5 dark:border-l-white/5',
+  );
+
+  if (header.isPlaceholder) {
+    return <div aria-hidden="true" style={span} className={borders} />;
+  }
+
+  // For names like "Sort Title": the header itself may render anything.
   const label =
     typeof column.columnDef.header === 'string'
       ? column.columnDef.header
       : column.id;
+  const isLeaf = header.subHeaders.length === 0;
 
   const sort = column.getIsSorted();
   const canSort = column.getCanSort();
@@ -41,6 +56,7 @@ export function SheetColumn<TData>({
   return (
     <div
       role="columnheader"
+      style={span}
       aria-sort={
         sort === 'asc'
           ? 'ascending'
@@ -51,13 +67,15 @@ export function SheetColumn<TData>({
               : undefined
       }
       className={cx(
-        'group relative flex items-center justify-between border-r border-b border-r-zinc-950/5 border-b-zinc-950/10 px-2 py-1.5 text-xs font-medium text-zinc-500 select-none dark:border-r-white/5 dark:border-b-white/10 dark:text-zinc-400',
-        isFirstCol && 'border-l border-l-zinc-950/5 dark:border-l-white/5',
+        'group relative flex items-center justify-between px-2 py-1.5 text-xs font-medium text-zinc-500 select-none dark:text-zinc-400',
+        borders,
         className,
       )}
     >
       <div className="flex items-center gap-1 uppercase">
-        <span className="truncate">{label}</span>
+        <span className="truncate">
+          {flexRender(column.columnDef.header, header.getContext())}
+        </span>
         {sort === 'asc' && <ChevronUpIcon className="size-3" />}
         {sort === 'desc' && <ChevronDownIcon className="size-3" />}
         {column.getIsFiltered() && (
@@ -77,7 +95,7 @@ export function SheetColumn<TData>({
           <ArrowsUpDownIcon className="size-3" />
         </button>
       )}
-      {column.getCanResize() && (
+      {isLeaf && column.getCanResize() && (
         <div
           role="separator"
           aria-orientation="vertical"

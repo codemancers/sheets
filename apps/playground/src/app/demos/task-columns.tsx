@@ -1,47 +1,32 @@
-import { defineSheetColumn } from '@codemancers/sheets';
+import { createColumnHelper } from '@tanstack/react-table';
 import { SheetPrimaryCell, SheetTextCell } from '@codemancers/sheets/ui';
 import type { Task } from '../data';
 
-/** Read-only task columns shared by the sorting, add-row and 1,000-row demos. */
+const task = createColumnHelper<Task>();
+
+/** Read-only task columns shared by the sorting, add-row and states demos. */
 export function taskColumns(onOpen?: (task: Task) => void) {
   return [
-    defineSheetColumn<Task>({
-      id: 'title',
+    task.accessor('title', {
       header: 'Title',
-      accessor: 'title',
-      width: 300,
-      sortable: true,
+      size: 300,
       cell: ({ row }) => (
         <SheetPrimaryCell
           href={`#task-${row.id}`}
           detailHref={`#task-${row.id}/details`}
-          onOpenDrawer={onOpen && (() => onOpen(row.original))}
+          onOpen={onOpen && (() => onOpen(row.original))}
         >
           {row.original.title}
         </SheetPrimaryCell>
       ),
     }),
-    defineSheetColumn<Task>({
-      id: 'status',
+    task.accessor('status', {
       header: 'Status',
-      accessor: 'status',
-      cell: ({ getValue }) => (
-        <SheetTextCell muted>{String(getValue())}</SheetTextCell>
-      ),
+      enableSorting: false,
+      cell: ({ getValue }) => <SheetTextCell muted>{getValue()}</SheetTextCell>,
     }),
     // Plain values need no cell renderer.
-    defineSheetColumn<Task>({
-      id: 'owner',
-      header: 'Owner',
-      accessor: 'owner',
-      sortable: true,
-    }),
-    defineSheetColumn<Task>({
-      id: 'due',
-      header: 'Due',
-      accessor: 'due',
-      width: 120,
-      sortable: true,
-    }),
+    task.accessor('owner', { header: 'Owner' }),
+    task.accessor('due', { header: 'Due', size: 120 }),
   ];
 }
