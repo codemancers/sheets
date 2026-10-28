@@ -1,6 +1,6 @@
-/// <reference types='vitest' />
-import { defineConfig } from 'vite';
+import { defaultClientConditions, defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig(() => ({
   root: import.meta.dirname,
@@ -13,14 +13,15 @@ export default defineConfig(() => ({
     port: 4200,
     host: 'localhost',
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    // Use @codemancers/sheets from source, so edits to it hot-reload here.
+    conditions: ['@codemancers/source', ...defaultClientConditions],
+  },
   build: {
     outDir: './dist',
     emptyOutDir: true,
     reportCompressedSize: true,
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
   },
   test: {
     name: '@codemancers/playground',
