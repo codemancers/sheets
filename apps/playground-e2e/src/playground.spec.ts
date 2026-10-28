@@ -37,7 +37,7 @@ test.describe('sorting and row actions', () => {
       .getByRole('button', { name: 'Open', exact: true })
       .click();
     await expect(demo(page, region).getByRole('status')).toHaveText(
-      'Opened “Wire Sheets into Juno”',
+      'Opened “Set up the staging server”',
     );
   });
 });
@@ -62,7 +62,9 @@ test.describe('inline editing', () => {
     page,
   }) => {
     const row = dataRow(page, region, 1);
-    await row.getByRole('button', { name: 'Wire Sheets into Juno' }).click();
+    await row
+      .getByRole('button', { name: 'Set up the staging server' })
+      .click();
     await row.getByRole('textbox').fill('taken');
     await row.getByRole('textbox').press('Enter');
 
@@ -95,8 +97,8 @@ test.describe('inline editing', () => {
 
   test("batches a row's edits into one save", async ({ page }) => {
     const row = dataRow(page, region, 4);
-    await row.getByRole('button', { name: 'Asha' }).click();
-    await row.getByRole('textbox').fill('Meera');
+    await row.getByRole('button', { name: 'Alan' }).click();
+    await row.getByRole('textbox').fill('Margaret');
     await row.getByRole('textbox').press('Enter');
     await row.getByRole('button', { name: 'Review the README' }).click();
     await row.getByRole('textbox').fill('Review the docs');
@@ -161,7 +163,7 @@ test.describe('keyboard', () => {
 
     await page.keyboard.press('Tab');
 
-    await expect(row.getByRole('button', { name: 'Sibtain' })).toBeFocused();
+    await expect(row.getByRole('button', { name: 'Grace' })).toBeFocused();
   });
 });
 
