@@ -19,12 +19,11 @@ jobs:
           filter: tree:0
           fetch-depth: 0
 
+      # Version comes from "packageManager" in package.json
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.17.1
           run_install: false
 
-      # Cache the pnpm store using the committed lockfile
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -32,14 +31,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
-
-      # Start task distribution using the workspace's installed Nx version
-      - run: pnpm exec nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="e2e"
       - run: pnpm exec playwright install --with-deps
 
-      # Prepend any command with "nx record --" to record its logs to Nx Cloud
-      - run: pnpm exec nx record -- pnpm exec nx format:check --base="remotes/origin/main"
+      - run: pnpm exec nx format:check --base="remotes/origin/main"
       - run: pnpm exec nx run-many -t lint test build typecheck e2e
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/docs/features/ci-features/self-healing-ci
-      - run: pnpm exec nx fix-ci
-        if: always()

@@ -27,18 +27,6 @@
           "buildDepsName": "build-deps",
           "watchDepsName": "watch-deps"
         }
-      },
-      "exclude": ["packages/shared/models/*"]
-    },
-    {
-      "plugin": "@nx/react/router-plugin",
-      "options": {
-        "buildTargetName": "build",
-        "devTargetName": "dev",
-        "startTargetName": "start",
-        "watchDepsTargetName": "watch-deps",
-        "buildDepsTargetName": "build-deps",
-        "typecheckTargetName": "typecheck"
       }
     },
     {
@@ -68,15 +56,6 @@
       }
     },
     {
-      "plugin": "@nx/js/typescript",
-      "include": ["packages/shared/models/*"],
-      "options": {
-        "typecheck": {
-          "targetName": "typecheck"
-        }
-      }
-    },
-    {
       "plugin": "@nx/vitest",
       "options": {
         "testTargetName": "test"
@@ -87,11 +66,6 @@
     "test": {
       "dependsOn": ["^build"]
     },
-    "@nx/esbuild:esbuild": {
-      "cache": true,
-      "dependsOn": ["^build"],
-      "inputs": ["production", "^production"]
-    },
     "@nx/js:tsc": {
       "cache": true,
       "dependsOn": ["^build"],
@@ -101,7 +75,6 @@
   "generators": {
     "@nx/react": {
       "application": {
-        "babel": true,
         "style": "css",
         "linter": "eslint",
         "bundler": "vite"
