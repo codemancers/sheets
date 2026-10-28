@@ -16,9 +16,8 @@ type LinkLikeProps = {
 
 /**
  * Opt into spreadsheet-style renaming: a plain click on the name starts an
- * in-place edit instead of opening the drawer. Both destinations stay one click
- * away on the hover icons, which is why the name's click is free to reassign —
- * it was always redundant with the panel icon.
+ * in-place edit instead of opening the row. Both destinations stay one click
+ * away on the hover icons, which is why the name's click is free to reassign.
  */
 export type SheetPrimaryCellEditable = {
   /** The raw text to edit. `children` may be decorated; this may not. */
@@ -58,25 +57,25 @@ export type SheetPrimaryCellEditable = {
 
 export type SheetPrimaryCellProps = {
   /**
-   * Where the name links — typically the drawer URL (`/<resource>?id=<rowId>`),
-   * so modified-click / "open in new tab" lands there. Omit for a name that is
-   * not a link. Unused when `editable` is set: the name is then a button, and
+   * Where the name links — often the URL that opens this row in place (e.g.
+   * `/<resource>?id=<rowId>`), so modified-click / "open in new tab" lands
+   * there. Omit for a name that is not a link. Unused when `editable` is set: the name is then a button, and
    * `detailHref`'s icon is the cmd-clickable link.
    */
   href?: string;
   /**
-   * Full detail page URL (`/<resource>/<rowId>`). Omit for drawer-only
-   * entities (no full-page route) — the detail icon is not rendered.
+   * The row's own page (`/<resource>/<rowId>`). Omit when there is none: the
+   * detail icon is not rendered.
    */
   detailHref?: string;
   /**
-   * Opens the detail drawer — fired by plain click on the name and by the
-   * panel icon. Omit when there is no drawer: the name then navigates
-   * normally and the panel icon is not shown.
+   * Opens the row in place — a side panel, a dialog, whatever the app uses.
+   * Fired by a plain click on the name and by the panel icon. Omit to have the
+   * name navigate normally, without the panel icon.
    */
-  onOpenDrawer?: () => void;
-  /** Accessible label for the drawer icon. */
-  drawerLabel?: string;
+  onOpen?: () => void;
+  /** Accessible label for the open icon. */
+  openLabel?: string;
   /** Accessible label for the detail-page icon. */
   detailLabel?: string;
   children?: ReactNode;
@@ -101,9 +100,9 @@ const iconActionClass =
   'rounded p-1 text-zinc-500 hover:bg-zinc-950/5 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white';
 
 /**
- * Primary (name) cell for Sheet rows: the row's name — a link, a
- * drawer-opener or plain text — plus up to two hover-revealed row actions:
- * open the detail drawer, or jump to the full detail page. SheetRow renders `role="row"`, so the actions
+ * Primary (name) cell for Sheet rows: the row's name — a link, a button that
+ * opens the row, or plain text — plus up to two hover-revealed row actions:
+ * open the row in place, or go to its own page. SheetRow renders `role="row"`, so the actions
  * reveal via an ancestor-hover arbitrary variant without the row
  * needing a `group` class; `focus-within` keeps them reachable by
  * keyboard.
@@ -115,8 +114,8 @@ const iconActionClass =
 export function SheetPrimaryCell({
   href,
   detailHref,
-  onOpenDrawer,
-  drawerLabel = 'Open in side drawer',
+  onOpen,
+  openLabel = 'Open',
   detailLabel = 'Open details page',
   children,
   className,
@@ -206,15 +205,15 @@ export function SheetPrimaryCell({
         <LinkComponent
           href={href}
           onClick={
-            onOpenDrawer
+            onOpen
               ? (e) => {
-                  // Plain left-click: open drawer in place. Modified clicks
-                  // (cmd/ctrl/shift, middle button) fall through so "Open in
-                  // new tab" lands on the drawer URL and auto-opens on mount.
+                  // Plain left-click: open the row in place. Modified clicks
+                  // (cmd/ctrl/shift, middle button) fall through, so "Open in
+                  // new tab" lands on href.
                   if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0)
                     return;
                   e.preventDefault();
-                  onOpenDrawer();
+                  onOpen();
                 }
               : undefined
           }
@@ -222,10 +221,10 @@ export function SheetPrimaryCell({
         >
           {children}
         </LinkComponent>
-      ) : onOpenDrawer ? (
+      ) : onOpen ? (
         <button
           type="button"
-          onClick={onOpenDrawer}
+          onClick={onOpen}
           className={cx(nameLinkClass, 'text-left')}
         >
           {children}
@@ -235,14 +234,14 @@ export function SheetPrimaryCell({
           {children}
         </span>
       )}
-      {(onOpenDrawer || detailHref != null) && (
+      {(onOpen || detailHref != null) && (
         <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 [[role=row]:hover_&]:opacity-100">
-          {onOpenDrawer && (
+          {onOpen && (
             <button
               type="button"
-              aria-label={drawerLabel}
-              title={drawerLabel}
-              onClick={onOpenDrawer}
+              aria-label={openLabel}
+              title={openLabel}
+              onClick={onOpen}
               className={iconActionClass}
             >
               <PanelRight className="size-4" />

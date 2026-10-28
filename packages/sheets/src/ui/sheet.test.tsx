@@ -1,11 +1,12 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { defineSheetColumn } from '../hooks/index.js';
+import { createColumnHelper } from '@tanstack/react-table';
 import { useSheet } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 import { SheetEditableTextCell } from './cells/editable-text-cell.js';
 
 type Row = { id: number; name: string };
+const rowColumn = createColumnHelper<Row>();
 
 function TestSheet({
   data,
@@ -15,13 +16,7 @@ function TestSheet({
   isLoading?: boolean;
 }) {
   const sheet = useSheet({
-    columns: [
-      defineSheetColumn<Row>({
-        id: 'name',
-        header: 'Name',
-        accessor: 'name',
-      }),
-    ],
+    columns: [rowColumn.accessor('name', { header: 'Name' })],
     data,
     getRowId: (row) => String(row.id),
   });
@@ -52,10 +47,8 @@ describe('Sheet', () => {
     function InlineColumns() {
       const sheet = useSheet({
         columns: [
-          defineSheetColumn<Row>({
-            id: 'name',
+          rowColumn.accessor('name', {
             header: 'Name',
-            accessor: 'name',
             cell: ({ row }) => (
               <SheetEditableTextCell value={row.original.name} />
             ),
@@ -83,18 +76,47 @@ describe('Sheet', () => {
     expect(screen.getByText('Alpha').className).toContain('truncate');
   });
 
+  it('renders function headers, and group headers spanning their columns', () => {
+    type Person = { id: string; first: string; last: string; age: number };
+    const person = createColumnHelper<Person>();
+    function Grouped() {
+      const sheet = useSheet({
+        columns: [
+          person.group({
+            id: 'name',
+            header: 'Name',
+            columns: [
+              person.accessor('first', { header: 'First' }),
+              person.accessor('last', { header: () => <em>Last</em> }),
+            ],
+          }),
+          person.accessor('age', { header: 'Age' }),
+        ],
+        data: [{ id: '1', first: 'Ada', last: 'Lovelace', age: 36 }],
+        getRowId: (p) => p.id,
+      });
+      return <Sheet instance={sheet} />;
+    }
+    render(<Grouped />);
+
+    expect(
+      screen.getByRole('columnheader', { name: 'Name' }).style.gridColumn,
+    ).toBe('span 2');
+    expect(screen.getByText('Last').tagName).toBe('EM');
+    const [head] = screen.getAllByRole('rowgroup');
+    expect(within(head).getAllByRole('row')).toHaveLength(2);
+  });
+
   describe('accessibility', () => {
     type Task = { id: string; title: string };
+    const taskColumn = createColumnHelper<Task>();
 
     function TaskSheet({ isLoading = false }: { isLoading?: boolean }) {
       const sheet = useSheet({
         columns: [
-          defineSheetColumn<Task>({
-            id: 'title',
+          taskColumn.accessor('title', {
             header: 'Title',
-            accessor: 'title',
-            sortable: true,
-            width: 200,
+            size: 200,
             cell: ({ row }) => (
               <SheetEditableTextCell value={row.original.title} />
             ),
@@ -107,7 +129,6 @@ describe('Sheet', () => {
         <Sheet
           instance={sheet}
           isLoading={isLoading}
-          showAddRow
           onAddRow={() => undefined}
         />
       );

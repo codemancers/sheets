@@ -32,12 +32,12 @@ test.describe('sorting and row actions', () => {
     await expect(firstTitle).toHaveText('Write release notes');
   });
 
-  test('opens the drawer from the row action', async ({ page }) => {
+  test('opens the row from its action', async ({ page }) => {
     await dataRow(page, region, 1)
-      .getByRole('button', { name: 'Open in side drawer' })
+      .getByRole('button', { name: 'Open', exact: true })
       .click();
     await expect(demo(page, region).getByRole('status')).toHaveText(
-      'Opened drawer for “Wire Sheets into Juno”',
+      'Opened “Wire Sheets into Juno”',
     );
   });
 });
@@ -185,12 +185,13 @@ test('shows loading and empty states', async ({ page }) => {
 
 test('sorts 1,000 rows in the browser', async ({ page }) => {
   const region = demo(page, '1,000 rows');
-  await expect(region.getByRole('row')).toHaveCount(1001);
+  // Two header rows (the groups, then the columns) and the data rows.
+  await expect(region.getByRole('row')).toHaveCount(1002);
 
   await region.getByRole('button', { name: 'Sort Title' }).click();
 
   await expect(
-    dataRow(page, '1,000 rows', 0).getByRole('link').first(),
+    region.getByRole('row').nth(2).getByRole('cell').first(),
   ).toHaveText('Accessibility pass');
 });
 

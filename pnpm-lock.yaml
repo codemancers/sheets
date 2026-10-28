@@ -350,20 +350,24 @@ importers:
       '@codemancers/sheets':
         specifier: workspace:*
         version: link:../../packages/sheets
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
 
   apps/playground-e2e: {}
 
   packages/sheets:
     dependencies:
-      '@tanstack/react-table':
-        specifier: ^8.21.3
-        version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       react:
         specifier: ^18.2.0 || ^19.0.0
         version: 19.0.0
       tailwindcss:
         specifier: ^4.0.0
         version: 4.3.3
+    devDependencies:
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
 
 packages:
 

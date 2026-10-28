@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { useSheet, type SortingState } from '@codemancers/sheets';
+import type { SortingState } from '@tanstack/react-table';
+import { useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
 import { makeTasks, sortTasks } from '../data';
 import { taskColumns } from './task-columns';
 
 const TASKS = makeTasks(10);
 
+/** Server-side sorting: the sheet reports the sort, the app applies it. */
 export function SortingDemo() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [opened, setOpened] = useState<string>();
@@ -18,6 +20,7 @@ export function SortingDemo() {
     columns,
     data,
     getRowId: (task) => task.id,
+    manualSorting: true,
     state: { sorting },
     onSortingChange: setSorting,
   });
@@ -31,7 +34,7 @@ export function SortingDemo() {
         role="status"
         className="border-t border-zinc-950/10 px-3 py-2 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400"
       >
-        {opened ? `Opened drawer for “${opened}”` : 'No drawer open'}
+        {opened ? `Opened “${opened}”` : 'Nothing opened'}
       </p>
     </div>
   );

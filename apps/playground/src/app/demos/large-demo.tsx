@@ -1,22 +1,40 @@
-import { useMemo } from 'react';
-import { getSortedRowModel, useSheet } from '@codemancers/sheets';
+import { createColumnHelper } from '@tanstack/react-table';
+import { useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
-import { makeTasks } from '../data';
-import { taskColumns } from './task-columns';
+import { makeTasks, type Task } from '../data';
 
 const TASKS = makeTasks(1000);
+const task = createColumnHelper<Task>();
 
-/** Sorted in the browser. No virtualization yet: every row is in the DOM. */
+// Group headers, and a header that renders markup instead of a string.
+const columns = [
+  task.group({
+    id: 'task',
+    header: 'Task',
+    columns: [
+      task.accessor('title', { header: 'Title', size: 300 }),
+      task.accessor('status', { header: 'Status' }),
+    ],
+  }),
+  task.group({
+    id: 'assignment',
+    header: 'Assignment',
+    columns: [
+      task.accessor('owner', { header: 'Owner' }),
+      task.accessor('due', {
+        header: () => <abbr title="Due date">Due</abbr>,
+        size: 120,
+      }),
+    ],
+  }),
+];
+
+/** Sorted in the browser, the default. No virtualization yet. */
 export function LargeDemo() {
-  const columns = useMemo(() => taskColumns(), []);
   const sheet = useSheet({
     columns,
     data: TASKS,
     getRowId: (task) => task.id,
-    tableOptions: {
-      manualSorting: false,
-      getSortedRowModel: getSortedRowModel(),
-    },
   });
   return <Sheet instance={sheet} />;
 }

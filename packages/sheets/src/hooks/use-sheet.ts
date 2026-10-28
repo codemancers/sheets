@@ -1,94 +1,77 @@
+'use client';
+
 import {
   getCoreRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
   useReactTable,
-  type ColumnDef,
-  type Table,
+  type RowData,
   type TableOptions,
 } from '@tanstack/react-table';
-import { useMemo } from 'react';
-import { toTanStackColumn } from './define-sheet-column.js';
 import type { CellStatusState } from './use-cell-status.js';
 import type { RowChangesState } from './use-row-changes.js';
-import type { SheetColumn, SheetState, SheetStateChange } from './types.js';
 
-export type UseSheetOptions<TData> = {
-  columns: SheetColumn<TData>[];
-  data: TData[];
-  pageCount?: number;
-  /**
-   * The table state the app controls, each key paired with its change
-   * handler. Keys left out are managed by the sheet, so an app that does not
-   * care about column widths still gets working resize handles.
-   */
-  state?: SheetState;
-  getRowId?: (row: TData, index: number) => string;
-  /**
-   * The whole `useCellStatus()` state. Not just the map: cells validate their
-   * own committed values against the column schema, so they need the setters.
-   */
-  cellStatus?: CellStatusState;
-  /**
-   * From `useRowChanges()`. Pass it to submit per row instead of per cell —
-   * editable cells then stage their committed values here. Omit to keep each
-   * cell performing its own write through its `onCommit`.
-   */
-  rowChanges?: RowChangesState;
-  /**
-   * Any other TanStack Table option, applied last. Sorting, filtering and
-   * pagination are manual by default (the server does them); for local data,
-   * sort in the browser with
-   * `{ manualSorting: false, getSortedRowModel: getSortedRowModel() }`.
-   */
-  tableOptions?: Partial<TableOptions<TData>>;
-} & SheetStateChange;
-
-const DEFAULT_ROW_HEIGHT = 32;
+/**
+ * Everything `useReactTable` takes — columns are plain TanStack `ColumnDef`s
+ * — plus the sheet's editing state. `getCoreRowModel` is supplied.
+ */
+export type UseSheetOptions<TData extends RowData> = Omit<
+  TableOptions<TData>,
+  'getCoreRowModel'
+> &
+  Partial<Pick<TableOptions<TData>, 'getCoreRowModel'>> & {
+    /**
+     * The whole `useCellStatus()` state. Not just the map: cells validate
+     * their own committed values against the column schema, so they need the
+     * setters.
+     */
+    cellStatus?: CellStatusState;
+    /**
+     * From `useRowChanges()`. Pass it to submit per row instead of per cell —
+     * editable cells then stage their committed values here. Omit to keep each
+     * cell performing its own write through its `onCommit`.
+     */
+    rowChanges?: RowChangesState;
+  };
 
 /**
  * Drops undefined entries. TanStack spreads options over its defaults, so an
- * explicit `undefined` would replace the internal state or its updater.
+ * explicit `undefined` would replace a default, such as an internal state
+ * updater.
  */
-function defined<T extends object>(values: T): Partial<T> {
+function defined<T extends object>(values: T): T {
   return Object.fromEntries(
     Object.entries(values).filter(([, value]) => value !== undefined),
-  ) as Partial<T>;
+  ) as T;
 }
 
-export function useSheet<TData>({
-  columns,
-  data,
-  pageCount,
-  state = {},
-  getRowId,
+/**
+ * `useReactTable` with a sheet's defaults: sorting and filtering in the
+ * browser (TanStack skips them when `manualSorting` / `manualFiltering` is
+ * set, for server-side data) and live column resizing. Any option the app
+ * passes wins.
+ */
+export function useSheet<TData extends RowData>({
   cellStatus,
   rowChanges,
-  tableOptions,
-  ...stateChange
+  ...options
 }: UseSheetOptions<TData>) {
-  const tanstackColumns = useMemo<ColumnDef<TData, unknown>[]>(
-    () => columns.map((col) => toTanStackColumn(col)),
-    [columns],
-  );
-  const { rowHeight = DEFAULT_ROW_HEIGHT, ...tableState } = state;
-
-  const table: Table<TData> = useReactTable<TData>({
-    data,
-    columns: tanstackColumns,
-    pageCount: pageCount ?? -1,
-    manualSorting: true,
-    manualFiltering: true,
-    manualPagination: true,
+  const table = useReactTable<TData>({
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
-    initialState: { pagination: { pageIndex: 0, pageSize: 50 } },
-    state: defined(tableState),
-    ...defined(stateChange),
-    getCoreRowModel: getCoreRowModel(),
-    getRowId,
-    ...tableOptions,
+    // There is no pagination UI, and resetting the page index on every data
+    // change would loop forever when an app passes data that is not memoised.
+    autoResetPageIndex: false,
+    ...defined(options),
+    ...(options.state ? { state: defined(options.state) } : {}),
   });
 
-  return { table, rowHeight, columns, cellStatus, rowChanges };
+  return { table, cellStatus, rowChanges };
 }
 
-export type SheetInstance<TData> = ReturnType<typeof useSheet<TData>>;
+export type SheetInstance<TData extends RowData> = ReturnType<
+  typeof useSheet<TData>
+>;

@@ -8,52 +8,50 @@ import {
   type RowSubmitResult,
 } from '../../hooks/use-row-changes.js';
 
-const renderCell = (onOpenDrawer = vi.fn()) => {
+const renderCell = (onOpen = vi.fn()) => {
   render(
     <div role="row">
       <SheetPrimaryCell
         href="/projects?id=7"
         detailHref="/projects/7"
-        onOpenDrawer={onOpenDrawer}
-        drawerLabel="Open project in side drawer"
+        onOpen={onOpen}
+        openLabel="Open project"
         detailLabel="Open project details page"
       >
         Project Seven
       </SheetPrimaryCell>
     </div>,
   );
-  return onOpenDrawer;
+  return onOpen;
 };
 
 describe('SheetPrimaryCell', () => {
-  it('renders the name as a link to the drawer URL', () => {
+  it('renders the name as a link to href', () => {
     renderCell();
     const link = screen.getByRole('link', { name: 'Project Seven' });
     expect(link.getAttribute('href')).toBe('/projects?id=7');
   });
 
-  it('opens the drawer on plain click instead of navigating', () => {
-    const onOpenDrawer = renderCell();
+  it('opens the row on plain click instead of navigating', () => {
+    const onOpen = renderCell();
     const link = screen.getByRole('link', { name: 'Project Seven' });
     const navigated = fireEvent.click(link);
-    expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(1);
     expect(navigated).toBe(false); // preventDefault() was called
   });
 
   it('lets modified clicks fall through to native navigation', () => {
-    const onOpenDrawer = renderCell();
+    const onOpen = renderCell();
     const link = screen.getByRole('link', { name: 'Project Seven' });
     const navigated = fireEvent.click(link, { metaKey: true });
-    expect(onOpenDrawer).not.toHaveBeenCalled();
+    expect(onOpen).not.toHaveBeenCalled();
     expect(navigated).toBe(true); // default not prevented
   });
 
-  it('opens the drawer from the panel icon', () => {
-    const onOpenDrawer = renderCell();
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Open project in side drawer' }),
-    );
-    expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+  it('opens the row from the panel icon', () => {
+    const onOpen = renderCell();
+    fireEvent.click(screen.getByRole('button', { name: 'Open project' }));
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
   it('links the detail icon to the full detail page', () => {
@@ -64,22 +62,20 @@ describe('SheetPrimaryCell', () => {
     expect(detail.getAttribute('href')).toBe('/projects/7');
   });
 
-  it('omits the detail icon when detailHref is not given (drawer-only entities)', () => {
+  it('omits the detail icon when detailHref is not given (no page of its own)', () => {
     render(
       <div role="row">
         <SheetPrimaryCell
           href="/projects/3?tab=sprints&id=9"
-          onOpenDrawer={vi.fn()}
-          drawerLabel="Open sprint in side drawer"
+          onOpen={vi.fn()}
+          openLabel="Open sprint"
           detailLabel="Open sprint details page"
         >
           Sprint Nine
         </SheetPrimaryCell>
       </div>,
     );
-    expect(
-      screen.getByRole('button', { name: 'Open sprint in side drawer' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Open sprint' })).toBeTruthy();
     expect(
       screen.queryByRole('link', { name: 'Open sprint details page' }),
     ).toBeNull();
@@ -87,16 +83,16 @@ describe('SheetPrimaryCell', () => {
 
   it('hides the actions until the row is hovered or focused', () => {
     renderCell();
-    const drawerButton = screen.getByRole('button', {
-      name: 'Open project in side drawer',
+    const openButton = screen.getByRole('button', {
+      name: 'Open project',
     });
-    const container = drawerButton.parentElement;
+    const container = openButton.parentElement;
     expect(container?.className).toContain('opacity-0');
     expect(container?.className).toContain('[[role=row]:hover_&]:opacity-100');
     expect(container?.className).toContain('focus-within:opacity-100');
   });
 
-  it('navigates normally when there is no drawer', () => {
+  it('navigates normally without onOpen', () => {
     render(
       <SheetPrimaryCell href="#project-7">Project Seven</SheetPrimaryCell>,
     );
@@ -104,25 +100,19 @@ describe('SheetPrimaryCell', () => {
     const link = screen.getByRole('link', { name: 'Project Seven' });
     // fireEvent.click returns false when the default was prevented.
     expect(fireEvent.click(link)).toBe(true);
-    expect(
-      screen.queryByRole('button', { name: 'Open in side drawer' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Open' })).toBeNull();
   });
 
-  it('opens the drawer from the name when there is no URL', () => {
-    const onOpenDrawer = vi.fn();
-    render(
-      <SheetPrimaryCell onOpenDrawer={onOpenDrawer}>
-        Project Seven
-      </SheetPrimaryCell>,
-    );
+  it('opens the row from the name when there is no href', () => {
+    const onOpen = vi.fn();
+    render(<SheetPrimaryCell onOpen={onOpen}>Project Seven</SheetPrimaryCell>);
 
     fireEvent.click(screen.getByRole('button', { name: 'Project Seven' }));
 
-    expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it('renders plain text with neither a URL nor a drawer', () => {
+  it('renders plain text with neither href nor onOpen', () => {
     render(<SheetPrimaryCell>Project Seven</SheetPrimaryCell>);
 
     expect(screen.getByText('Project Seven').tagName).toBe('SPAN');
@@ -131,14 +121,14 @@ describe('SheetPrimaryCell', () => {
   });
 
   describe('editable', () => {
-    const renderEditable = (onCommit = vi.fn(), onOpenDrawer = vi.fn()) => {
+    const renderEditable = (onCommit = vi.fn(), onOpen = vi.fn()) => {
       render(
         <div role="row">
           <SheetPrimaryCell
             href="/projects?id=7"
             detailHref="/projects/7"
-            onOpenDrawer={onOpenDrawer}
-            drawerLabel="Open project in side drawer"
+            onOpen={onOpen}
+            openLabel="Open project"
             detailLabel="Open project details page"
             editable={{
               value: 'Project Seven',
@@ -150,19 +140,19 @@ describe('SheetPrimaryCell', () => {
           </SheetPrimaryCell>
         </div>,
       );
-      return { onCommit, onOpenDrawer };
+      return { onCommit, onOpen };
     };
 
     // The whole point of the mode: a click edits rather than navigates. Rendered
     // as a button, not a link — a link whose click edits would mislead AT users.
-    it('starts an in-place edit on plain click, without opening the drawer', () => {
-      const { onOpenDrawer } = renderEditable();
+    it('starts an in-place edit on plain click, without opening the row', () => {
+      const { onOpen } = renderEditable();
 
       expect(screen.queryByRole('link', { name: 'Project Seven' })).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'Project Seven' }));
 
       expect(screen.getByDisplayValue('Project Seven')).toBeTruthy();
-      expect(onOpenDrawer).not.toHaveBeenCalled();
+      expect(onOpen).not.toHaveBeenCalled();
     });
 
     // Without this the name needs a second click before it can be typed in.
@@ -208,7 +198,7 @@ describe('SheetPrimaryCell', () => {
         <div role="row">
           <SheetPrimaryCell
             href="/projects?id=7"
-            onOpenDrawer={vi.fn()}
+            onOpen={vi.fn()}
             editable={{
               value: 'Project Seven',
               onCommit: vi.fn(),
@@ -231,7 +221,7 @@ describe('SheetPrimaryCell', () => {
         <div role="row">
           <SheetPrimaryCell
             href="/projects?id=7"
-            onOpenDrawer={vi.fn()}
+            onOpen={vi.fn()}
             editable={{
               value: '',
               onCommit: vi.fn(),
@@ -251,12 +241,10 @@ describe('SheetPrimaryCell', () => {
     // Reassigning the name's click is only acceptable because both destinations
     // stay reachable on the icons.
     it('keeps both navigation affordances on the icons', () => {
-      const { onOpenDrawer } = renderEditable();
+      const { onOpen } = renderEditable();
 
-      fireEvent.click(
-        screen.getByRole('button', { name: 'Open project in side drawer' }),
-      );
-      expect(onOpenDrawer).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Open project' }));
+      expect(onOpen).toHaveBeenCalledTimes(1);
       expect(
         screen
           .getByRole('link', { name: 'Open project details page' })
@@ -288,7 +276,7 @@ describe('SheetPrimaryCell', () => {
           >
             <SheetPrimaryCell
               href="/projects?id=7"
-              onOpenDrawer={vi.fn()}
+              onOpen={vi.fn()}
               editable={{
                 value: 'Project Seven',
                 onCommit,
@@ -417,7 +405,7 @@ describe('SheetPrimaryCell', () => {
           >
             <SheetPrimaryCell
               href="/projects?id=7"
-              onOpenDrawer={vi.fn()}
+              onOpen={vi.fn()}
               editable={{
                 value: 'Project Seven',
                 schema: nameSchema,

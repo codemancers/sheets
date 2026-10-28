@@ -6,6 +6,7 @@
     "projectType": "application"
   },
   "dependencies": {
-    "@codemancers/sheets": "workspace:*"
+    "@codemancers/sheets": "workspace:*",
+    "@tanstack/react-table": "^8.21.3"
   }
 }
