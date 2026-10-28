@@ -118,11 +118,59 @@ test.describe('inline editing', () => {
   });
 });
 
+test.describe('keyboard', () => {
+  test('sorts from a focused header button', async ({ page }) => {
+    const region = demo(page, 'Sorting and row actions');
+    const sort = region.getByRole('button', { name: 'Sort Title' });
+
+    await sort.focus();
+    await expect(sort).toHaveCSS('opacity', '1');
+    await page.keyboard.press('Enter');
+
+    await expect(
+      region.getByRole('columnheader', { name: /Title/ }),
+    ).toHaveAttribute('aria-sort', 'ascending');
+  });
+
+  test('resizes a column with the arrow keys', async ({ page }) => {
+    const region = demo(page, 'Sorting and row actions');
+    const handle = region.getByRole('separator', { name: 'Resize Title' });
+
+    await handle.focus();
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Shift+ArrowRight');
+
+    await expect(handle).toHaveAttribute('aria-valuenow', '360');
+  });
+
+  test('Enter returns focus to the cell', async ({ page }) => {
+    const row = dataRow(page, 'Inline editing', 2);
+    await row.getByRole('button', { name: 'Accessibility pass' }).click();
+    await expect(row.getByRole('textbox', { name: 'Title' })).toBeFocused();
+
+    await page.keyboard.press('Enter');
+
+    await expect(
+      row.getByRole('button', { name: 'Accessibility pass' }),
+    ).toBeFocused();
+  });
+
+  test('Tab moves on to the next cell', async ({ page }) => {
+    const row = dataRow(page, 'Inline editing', 2);
+    await row.getByRole('button', { name: 'Accessibility pass' }).click();
+
+    await page.keyboard.press('Tab');
+
+    await expect(row.getByRole('button', { name: 'Sibtain' })).toBeFocused();
+  });
+});
+
 test('adds a row from the footer', async ({ page }) => {
   const region = demo(page, 'Adding rows');
-  await expect(region.getByRole('row')).toHaveCount(4);
-  await region.getByRole('button', { name: 'Add task' }).click();
+  // Header, three tasks and the add-row footer.
   await expect(region.getByRole('row')).toHaveCount(5);
+  await region.getByRole('button', { name: 'Add task' }).click();
+  await expect(region.getByRole('row')).toHaveCount(6);
   await expect(region.getByRole('link', { name: 'New task 4' })).toBeVisible();
 });
 
@@ -151,13 +199,6 @@ test('dark mode follows the toggle', async ({ page }) => {
   await expect(page.locator('html')).toHaveClass(/dark/);
 });
 
-// Violations the accessibility pass (PR 6) fixes. Anything new fails now.
-const KNOWN_VIOLATIONS = [
-  'aria-required-children',
-  'aria-required-parent',
-  'empty-table-header',
-];
-
 test('accessibility scan', async ({ page }, testInfo) => {
   // The 1,000-row demo repeats the same markup and makes the scan slow.
   const { violations } = await new AxeBuilder({ page })
@@ -173,7 +214,5 @@ test('accessibility scan', async ({ page }, testInfo) => {
       .map((v) => `axe: ${v.id} (${v.impact}) × ${v.nodes.length}: ${v.help}`)
       .join('\n'),
   );
-  expect(
-    violations.map((v) => v.id).filter((id) => !KNOWN_VIOLATIONS.includes(id)),
-  ).toEqual([]);
+  expect(violations.map((v) => v.id)).toEqual([]);
 });
