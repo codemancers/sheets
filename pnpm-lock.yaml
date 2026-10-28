@@ -245,9 +245,6 @@ importers:
       '@nx/vitest':
         specifier: 23.2.0
         version: 23.2.0(@babel/traverse@7.29.8(supports-color@8.1.1))(@nx/eslint@23.2.0(6395301c99a5a835616e59c874696c69))(@swc-node/register@1.11.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(@swc/types@0.1.28)(supports-color@8.1.1)(typescript@6.0.3))(@swc/cli@0.8.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(supports-color@8.1.1))(@swc/core@1.15.8(@swc/helpers@0.5.18))(nx@23.2.0(@swc-node/register@1.11.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(@swc/types@0.1.28)(supports-color@8.1.1)(typescript@6.0.3))(@swc/core@1.15.8(@swc/helpers@0.5.18)))(supports-color@8.1.1)(typescript@6.0.3)(vite@8.3.0(@types/node@24.13.6)(esbuild@0.27.7)(jiti@2.4.2)(yaml@2.9.0))(vitest@4.1.11)
-      '@nx/workspace':
-        specifier: 23.2.0
-        version: 23.2.0(@swc-node/register@1.11.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(@swc/types@0.1.28)(supports-color@8.1.1)(typescript@6.0.3))(@swc/core@1.15.8(@swc/helpers@0.5.18))
       '@playwright/test':
         specifier: ^1.36.0
         version: 1.63.0
@@ -317,9 +314,6 @@ importers:
       jsdom:
         specifier: ~22.1.0
         version: 22.1.0(supports-color@8.1.1)
-      jsonc-eslint-parser:
-        specifier: ^2.1.0
-        version: 2.4.2
       nx:
         specifier: 23.2.0
         version: 23.2.0(@swc-node/register@1.11.1(@swc/core@1.15.8(@swc/helpers@0.5.18))(@swc/types@0.1.28)(supports-color@8.1.1)(typescript@6.0.3))(@swc/core@1.15.8(@swc/helpers@0.5.18))
