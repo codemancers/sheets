@@ -1,0 +1,8 @@
+/*
+ * Adds the components' class names to the app's Tailwind v4 build.
+ * Import it after Tailwind:
+ *
+ *   @import 'tailwindcss';
+ *   @import '@codemancers/sheets/styles.css';
+ */
+@source './';

@@ -1,18 +1,63 @@
 {
   "name": "@codemancers/sheets",
   "version": "0.0.1",
+  "description": "Spreadsheet-style data grid for React: headless hooks on TanStack Table, plus Tailwind v4 components.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codemancers/sheets.git",
+    "directory": "packages/sheets"
+  },
+  "homepage": "https://github.com/codemancers/sheets#readme",
+  "bugs": "https://github.com/codemancers/sheets/issues",
+  "keywords": [
+    "react",
+    "tanstack-table",
+    "data-grid",
+    "spreadsheet",
+    "sheet",
+    "tailwindcss",
+    "headless"
+  ],
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
+      "@codemancers/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
+    "./ui": {
+      "@codemancers/source": "./src/ui.ts",
+      "types": "./dist/ui.d.ts",
+      "default": "./dist/ui.js"
+    },
+    "./styles.css": "./src/styles.css",
     "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!**/*.test.*",
+    "!**/*.tsbuildinfo"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
   }
 }
