@@ -32,13 +32,31 @@ test.describe('sorting and row actions', () => {
     await expect(firstTitle).toHaveText('Write release notes');
   });
 
-  test('opens the row from its action', async ({ page }) => {
-    await dataRow(page, region, 1)
-      .getByRole('button', { name: 'Open', exact: true })
+  test('opens a row in a drawer and returns focus when it closes', async ({
+    page,
+  }) => {
+    const row = dataRow(page, region, 1);
+    const open = row.getByRole('button', { name: 'Open', exact: true });
+
+    await open.click();
+    const drawer = page.getByRole('dialog', {
+      name: 'Set up the staging server',
+    });
+    await expect(drawer).toBeVisible();
+    await expect(row).toHaveAttribute('aria-current', 'true');
+
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
+    await expect(open).toBeFocused();
+  });
+
+  test('opens a row from its name', async ({ page }) => {
+    await dataRow(page, region, 0)
+      .getByRole('link', { name: 'Draft the launch post' })
       .click();
-    await expect(demo(page, region).getByRole('status')).toHaveText(
-      'Opened “Set up the staging server”',
-    );
+    await expect(
+      page.getByRole('dialog', { name: 'Draft the launch post' }),
+    ).toBeVisible();
   });
 });
 

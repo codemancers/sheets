@@ -89,7 +89,7 @@ function App() {
           <Demo
             id="sorting"
             title="Sorting and row actions"
-            description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Hover a row for its open and detail-page actions."
+            description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Click a title, or hover a row for its open icon, to open it in a drawer (useRowDrawer); Escape closes it."
           >
             <SortingDemo />
           </Demo>

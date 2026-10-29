@@ -1,23 +1,26 @@
-import { useMemo, useState, useContext } from 'react';
+import { useContext, useMemo, useState } from 'react';
 import type { SortingState } from '@tanstack/react-table';
-import { useSheet } from '@codemancers/sheets';
+import { useRowDrawer, useSheet } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
 import { RtlContext } from '../direction';
 import { makeTasks, sortTasks } from '../data';
 import { taskColumns } from './task-columns';
+import { TaskDrawer } from './task-drawer';
 
 const TASKS = makeTasks(10);
 
-/** Server-side sorting: the sheet reports the sort, the app applies it. */
+/**
+ * Server-side sorting: the sheet reports the sort, the app applies it. Rows
+ * open in a drawer through useRowDrawer.
+ */
 export function SortingDemo() {
   const rtl = useContext(RtlContext);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [opened, setOpened] = useState<string>();
+  const drawer = useRowDrawer();
   const data = useMemo(() => sortTasks(TASKS, sorting), [sorting]);
-  const columns = useMemo(
-    () => taskColumns((task) => setOpened(task.title)),
-    [],
-  );
+  // open keeps one identity, so the columns are built once.
+  const { open } = drawer;
+  const columns = useMemo(() => taskColumns((task) => open(task.id)), [open]);
   const sheet = useSheet({
     columnResizeDirection: rtl ? 'rtl' : 'ltr',
     columns,
@@ -29,16 +32,12 @@ export function SortingDemo() {
   });
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1">
-        <Sheet instance={sheet} />
-      </div>
-      <p
-        role="status"
-        className="border-t border-zinc-950/10 px-3 py-2 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400"
-      >
-        {opened ? `Opened “${opened}”` : 'Nothing opened'}
-      </p>
-    </div>
+    <>
+      <Sheet instance={sheet} openRowId={drawer.openRowId} />
+      <TaskDrawer
+        task={TASKS.find((task) => task.id === drawer.openRowId)}
+        onClose={drawer.close}
+      />
+    </>
   );
 }
