@@ -1,10 +1,58 @@
-import { useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { RtlContext } from './direction';
 import { AddRowDemo } from './demos/add-row-demo';
 import { EditingDemo } from './demos/editing-demo';
 import { LargeDemo } from './demos/large-demo';
 import { SortingDemo } from './demos/sorting-demo';
 import { StatesDemo } from './demos/states-demo';
+
+// Lucide's maximize-2 and minimize-2 (ISC): the two-headed expand arrows.
+function ExpandIcon({ collapse = false }: { collapse?: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {collapse ? (
+        <>
+          <path d="m14 10 7-7" />
+          <path d="M20 10h-6V4" />
+          <path d="m3 21 7-7" />
+          <path d="M4 14h6v6" />
+        </>
+      ) : (
+        <>
+          <path d="M15 3h6v6" />
+          <path d="m21 3-7 7" />
+          <path d="m3 21 7-7" />
+          <path d="M9 21H3v-6" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+const iconButton =
+  'rounded-md border border-zinc-950/10 p-1.5 text-zinc-600 hover:bg-zinc-950/5 dark:border-white/15 dark:text-zinc-300 dark:hover:bg-white/10';
+
+/** `?full=<demo id>` opens that demo full screen, e.g. for a recording. */
+function isFullInUrl(id: string) {
+  return new URLSearchParams(window.location.search).get('full') === id;
+}
 
 function Demo({
   id,
@@ -17,18 +65,87 @@ function Demo({
   description: ReactNode;
   children: ReactNode;
 }) {
+  const [full, setFull] = useState(() => isFullInUrl(id));
+  const expandRef = useRef<HTMLButtonElement>(null);
+  const exitRef = useRef<HTMLButtonElement>(null);
+
+  const exit = useCallback(() => {
+    setFull(false);
+    // Back to the expand button once the full-screen frame has gone.
+    setTimeout(() => expandRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    if (!full) return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('full', id);
+    window.history.replaceState(null, '', url);
+    document.documentElement.classList.add('overflow-hidden');
+    exitRef.current?.focus();
+
+    // On window, so it runs after document listeners: an open cell editor or
+    // drawer that handles Escape marks it handled and keeps full screen.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) exit();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.documentElement.classList.remove('overflow-hidden');
+      const current = new URL(window.location.href);
+      if (current.searchParams.get('full') === id) {
+        current.searchParams.delete('full');
+        window.history.replaceState(null, '', current);
+      }
+    };
+  }, [full, id, exit]);
+
   return (
     <section aria-labelledby={id} className="space-y-3">
-      <div>
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          {description}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 id={id} className="text-base font-semibold">
+            {title}
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            {description}
+          </p>
+        </div>
+        <button
+          ref={expandRef}
+          type="button"
+          onClick={() => setFull(true)}
+          aria-label={`Full screen: ${title}`}
+          title="Full screen"
+          className={iconButton}
+        >
+          <ExpandIcon />
+        </button>
       </div>
-      <div className="h-80 overflow-hidden rounded-lg border border-zinc-950/10 dark:border-white/10">
-        {children}
+      {/* The same element either way, so the sheet keeps its state. */}
+      <div
+        className={
+          full
+            ? 'fixed inset-0 z-40 flex flex-col bg-white dark:bg-zinc-900'
+            : 'h-80 overflow-hidden rounded-lg border border-zinc-950/10 dark:border-white/10'
+        }
+      >
+        {full && (
+          <div className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-zinc-950/10 px-4 dark:border-white/10">
+            <span className="text-sm font-semibold">{title}</span>
+            <button
+              ref={exitRef}
+              type="button"
+              onClick={exit}
+              aria-label="Exit full screen"
+              title="Exit full screen (Esc)"
+              className={iconButton}
+            >
+              <ExpandIcon collapse />
+            </button>
+          </div>
+        )}
+        <div className={full ? 'min-h-0 flex-1' : 'h-full'}>{children}</div>
       </div>
     </section>
   );
