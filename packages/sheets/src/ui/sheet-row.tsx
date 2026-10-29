@@ -19,6 +19,8 @@ export type SheetRowProps<TData> = {
   rowIndex: number;
   rowHeight: number;
   highlight?: boolean;
+  /** The row is open in a drawer or panel (see `useRowDrawer`). */
+  open?: boolean;
   cellStatus?: CellStatusState;
   rowChanges?: RowChangesState;
 };
@@ -50,6 +52,7 @@ export function SheetRow<TData>({
   rowIndex,
   rowHeight,
   highlight = false,
+  open = false,
   cellStatus,
   rowChanges,
 }: SheetRowProps<TData>) {
@@ -72,11 +75,14 @@ export function SheetRow<TData>({
     <div
       ref={ref}
       role="row"
+      aria-current={open || undefined}
       className={cx(
         'grid scroll-mb-16 transition-colors duration-1000',
         highlight
           ? 'bg-sheet-highlight dark:bg-sheet-highlight-dark'
-          : 'hover:bg-sheet-fg/2.5 dark:hover:bg-sheet-fg-dark/2.5',
+          : open
+            ? 'bg-sheet-fg/5 dark:bg-sheet-fg-dark/5'
+            : 'hover:bg-sheet-fg/2.5 dark:hover:bg-sheet-fg-dark/2.5',
       )}
       style={{ ...sheetGrid, minHeight: `${rowHeight}px` }}
     >
