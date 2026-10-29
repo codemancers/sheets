@@ -108,6 +108,25 @@ describe('Sheet', () => {
     expect(within(head).getAllByRole('row')).toHaveLength(2);
   });
 
+  it('marks the row open in a drawer as the current one', () => {
+    function WithOpenRow() {
+      const sheet = useSheet({
+        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        data: [
+          { id: 1, name: 'Alpha' },
+          { id: 2, name: 'Beta' },
+        ],
+        getRowId: (row) => String(row.id),
+      });
+      return <Sheet instance={sheet} openRowId="2" />;
+    }
+    render(<WithOpenRow />);
+
+    const [, alpha, beta] = screen.getAllByRole('row');
+    expect(alpha.getAttribute('aria-current')).toBeNull();
+    expect(beta.getAttribute('aria-current')).toBe('true');
+  });
+
   describe('accessibility', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<Task>();

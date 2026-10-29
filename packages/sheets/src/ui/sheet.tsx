@@ -37,6 +37,11 @@ export type SheetProps<TData extends RowData> = {
    * moment to fade the highlight.
    */
   highlightedRowId?: string;
+  /**
+   * The id of the row open in a drawer or panel, which is marked as current
+   * (`useRowDrawer().openRowId`).
+   */
+  openRowId?: string | null;
   /** Replaces any of the text the sheet renders itself, e.g. to translate it. */
   labels?: Partial<SheetLabels>;
 };
@@ -45,6 +50,7 @@ type SheetBodyProps<TData extends RowData> = {
   rows: Row<TData>[];
   rowHeight: number;
   highlightedRowId?: string;
+  openRowId?: string | null;
   cellStatus?: CellStatusState;
   rowChanges?: RowChangesState;
   /** True while a column is being dragged wider or narrower. */
@@ -55,6 +61,7 @@ function SheetRows<TData extends RowData>({
   rows,
   rowHeight,
   highlightedRowId,
+  openRowId,
   cellStatus,
   rowChanges,
 }: SheetBodyProps<TData>) {
@@ -67,6 +74,7 @@ function SheetRows<TData extends RowData>({
           rowIndex={idx}
           rowHeight={rowHeight}
           highlight={highlightedRowId === row.id}
+          open={openRowId === row.id}
           cellStatus={cellStatus}
           rowChanges={rowChanges}
         />
@@ -88,6 +96,7 @@ const SheetBody = memo(
     prev.rows === next.rows &&
     prev.rowHeight === next.rowHeight &&
     prev.highlightedRowId === next.highlightedRowId &&
+    prev.openRowId === next.openRowId &&
     prev.cellStatus === next.cellStatus &&
     prev.rowChanges === next.rowChanges,
 ) as typeof SheetRows;
@@ -102,6 +111,7 @@ export function Sheet<TData extends RowData>({
   onAddRow,
   addRowDisabled,
   highlightedRowId,
+  openRowId,
   labels,
 }: SheetProps<TData>) {
   const { table, cellStatus, rowChanges } = instance;
@@ -150,6 +160,7 @@ export function Sheet<TData extends RowData>({
               rows={rows}
               rowHeight={rowHeight}
               highlightedRowId={highlightedRowId}
+              openRowId={openRowId}
               cellStatus={cellStatus}
               rowChanges={rowChanges}
               resizing={Boolean(

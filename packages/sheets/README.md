@@ -20,6 +20,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 - [Sorting and filtering](#sorting-and-filtering)
 - [Editing and saving](#editing-and-saving)
 - [Layout and states](#layout-and-states)
+- [Opening rows in a drawer](#opening-rows-in-a-drawer)
 - [Customising](#customising)
 - [Headless use](#headless-use)
 - [Accessibility](#accessibility)
@@ -113,7 +114,7 @@ A column without a `cell` renders its value as padded text. For anything else, r
 - **With `onOpen` only:** a button that opens the row.
 - **With neither:** plain text.
 
-The panel icon appears only when `onOpen` is set, and the details-page icon only when `detailHref` is set. Pass `editable` to rename in place instead (see [Editing and saving](#editing-and-saving)).
+The panel icon appears only when `onOpen` is set (see [Opening rows in a drawer](#opening-rows-in-a-drawer)), and the details-page icon only when `detailHref` is set. Pass `editable` to rename in place instead (see [Editing and saving](#editing-and-saving)).
 
 ```tsx
 task.accessor('title', {
@@ -322,13 +323,14 @@ function PriorityCell({ value }: { value: number }) {
 
 Column widths come from `size` (TanStack's default is 150px). After the last column, an empty filler column takes up the remaining width. `rowHeight` sets the minimum row height (default 32px).
 
-| Prop                     | What it does                                                                                                                       |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders. |
-| `emptyState`             | Content for a row that spans the columns when there's no data. Defaults to the `empty` label.                                      |
-| `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button.                                                             |
-| `highlightedRowId`       | Highlights a row and scrolls it into view. Clear it after a moment to fade the highlight.                                          |
-| `rowHeight`, `className` | The minimum row height, and extra classes for the scroll container.                                                                |
+| Prop                     | What it does                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders.        |
+| `emptyState`             | Content for a row that spans the columns when there's no data. Defaults to the `empty` label.                                             |
+| `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button.                                                                    |
+| `highlightedRowId`       | Highlights a row and scrolls it into view. Clear it after a moment to fade the highlight.                                                 |
+| `openRowId`              | Marks the row that is open in a drawer: highlighted, and announced as current. See [Opening rows in a drawer](#opening-rows-in-a-drawer). |
+| `rowHeight`, `className` | The minimum row height, and extra classes for the scroll container.                                                                       |
 
 ```tsx
 const [highlightedRowId, setHighlightedRowId] = useState<string>();
@@ -341,6 +343,57 @@ useEffect(() => {
 
 <Sheet instance={sheet} onAddRow={() => setHighlightedRowId(addTask().id)} highlightedRowId={highlightedRowId} />;
 ```
+
+## Opening rows in a drawer
+
+The package doesn't draw drawers; use the drawer, side panel or dialog from your design system. `useRowDrawer` keeps track of which row is open, and `<Sheet openRowId>` marks that row:
+
+```tsx
+import { useMemo } from 'react';
+import { createColumnHelper } from '@tanstack/react-table';
+import { useRowDrawer, useSheet } from '@codemancers/sheets';
+import { Sheet, SheetPrimaryCell } from '@codemancers/sheets/ui';
+
+const task = createColumnHelper<Task>();
+
+function Tasks({ tasks }: { tasks: Task[] }) {
+  const drawer = useRowDrawer();
+  const { open } = drawer;
+  const columns = useMemo(
+    () => [
+      task.accessor('title', {
+        header: 'Title',
+        cell: ({ row }) => (
+          <SheetPrimaryCell href={`/tasks?open=${row.id}`} onOpen={() => open(row.id)}>
+            {row.original.title}
+          </SheetPrimaryCell>
+        ),
+      }),
+    ],
+    [open],
+  );
+  const sheet = useSheet({ columns, data: tasks, getRowId: (t) => t.id });
+  const openTask = tasks.find((t) => t.id === drawer.openRowId);
+
+  return (
+    <>
+      <Sheet instance={sheet} openRowId={drawer.openRowId} />
+      <YourDrawer open={openTask !== undefined} onClose={drawer.close}>
+        {openTask && <TaskDetails task={openTask} />}
+      </YourDrawer>
+    </>
+  );
+}
+```
+
+- **What it gives you:** `openRowId`, `open(rowId)`, `close()`, `toggle(rowId)` and `isOpen(rowId)`. `open` and `close` keep the same identity across renders, so columns that use them can be built once.
+- **Focus:** closing returns focus to whatever opened the row, so keyboard users land back where they were.
+- **Keeping it in the URL:** to let an open drawer survive a refresh and be shared, control the state with your router or a library such as nuqs:
+
+  ```tsx
+  const [openId, setOpenId] = useQueryState('open'); // nuqs
+  const drawer = useRowDrawer({ openRowId: openId, onOpenRowIdChange: setOpenId });
+  ```
 
 ## Customising
 
@@ -478,15 +531,16 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 
 ### `@codemancers/sheets`
 
-| Export                                     | What it is                                                                                                                                                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`.                                                                                                  |
-| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.         |
-| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`. |
-| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`.                                                                                  |
-| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                |
-| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                 |
-| Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `SheetCellValidator`, `StandardSchemaV1`.              |
+| Export                                     | What it is                                                                                                                                                                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`.                                                                                                                              |
+| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                     |
+| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                             |
+| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`.                                                                                                              |
+| `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                  |
+| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                            |
+| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                             |
+| Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `SheetCellValidator`, `StandardSchemaV1`. |
 
 ### `@codemancers/sheets/ui`
 
