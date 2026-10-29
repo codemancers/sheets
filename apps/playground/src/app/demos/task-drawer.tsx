@@ -19,7 +19,10 @@ export function TaskDrawer({
     if (!task) return;
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key !== 'Escape') return;
+      // Handled here, so a full-screen demo behind it stays full screen.
+      event.preventDefault();
+      onClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);

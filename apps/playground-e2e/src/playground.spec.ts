@@ -185,6 +185,39 @@ test.describe('keyboard', () => {
   });
 });
 
+test.describe('full screen', () => {
+  test('fills the window, and Escape returns', async ({ page }) => {
+    const region = demo(page, 'Inline editing');
+    const expand = region.getByRole('button', { name: 'Full screen' });
+    const exit = region.getByRole('button', { name: 'Exit full screen' });
+
+    await expand.click();
+    const box = await region.getByRole('table').boundingBox();
+    const viewport = page.viewportSize();
+    expect(box?.width).toBe(viewport?.width);
+    expect(box?.height).toBeGreaterThan((viewport?.height ?? 0) - 60);
+    await expect(page).toHaveURL(/full=editing/);
+
+    // Escape in a cell editor cancels the edit and stays full screen.
+    await dataRow(page, 'Inline editing', 0)
+      .getByRole('button', { name: 'Draft the launch post' })
+      .click();
+    await page.keyboard.press('Escape');
+    await expect(exit).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(exit).toBeHidden();
+    await expect(expand).toBeFocused();
+    await expect(page).not.toHaveURL(/full=/);
+  });
+
+  test('opens a demo straight from the URL', async ({ page }) => {
+    await page.goto('/?full=large');
+    const box = await demo(page, '1,000 rows').getByRole('table').boundingBox();
+    expect(box?.width).toBe(page.viewportSize()?.width);
+  });
+});
+
 test('adds a row from the footer', async ({ page }) => {
   const region = demo(page, 'Adding rows');
   // Header, three tasks and the add-row footer.
@@ -197,9 +230,9 @@ test('adds a row from the footer', async ({ page }) => {
 test('shows loading and empty states', async ({ page }) => {
   const region = demo(page, 'Loading and empty states');
   await expect(region.locator('[aria-busy="true"]')).toBeVisible();
-  await region.getByRole('button', { name: 'Empty' }).click();
+  await region.getByRole('button', { name: 'Empty', exact: true }).click();
   await expect(region.getByText('No tasks match this filter.')).toBeVisible();
-  await region.getByRole('button', { name: 'Data' }).click();
+  await region.getByRole('button', { name: 'Data', exact: true }).click();
   await expect(region.getByRole('row')).toHaveCount(5);
 });
 

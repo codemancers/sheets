@@ -31,6 +31,8 @@ pnpm nx dev @codemancers/playground                 # http://localhost:4200
 pnpm nx run-many -t lint test build typecheck e2e   # everything CI runs
 ```
 
+Each demo in the playground has a full-screen button. To open one directly, add `?full=<demo>` to the URL, for example http://localhost:4200/?full=editing.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and conventions.
 
 ## License
