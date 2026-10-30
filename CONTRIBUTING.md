@@ -1,5 +1,7 @@
 # Contributing
 
+[docs/architecture.md](docs/architecture.md) explains how the code fits together, and [docs/decisions.md](docs/decisions.md) explains why it's built this way. AI coding agents follow [AGENTS.md](AGENTS.md).
+
 ## Setup
 
 1. Install Node 24 and pnpm. The pnpm version is pinned through `packageManager` in `package.json`, and pnpm 9.7+ or Corepack picks it up.
@@ -8,17 +10,19 @@
 
 ## Commands
 
-| Command                                             | What it does                                                               |
-| --------------------------------------------------- | -------------------------------------------------------------------------- |
-| `pnpm nx dev @codemancers/playground`               | The playground at http://localhost:4200. Edits to the package reload live. |
-| `pnpm nx test @codemancers/sheets`                  | Unit tests (Vitest and Testing Library)                                    |
-| `pnpm nx e2e @codemancers/playground-e2e`           | End-to-end tests and the axe accessibility scan (Playwright)               |
-| `pnpm nx run-many -t lint test build typecheck e2e` | Everything CI runs                                                         |
-| `pnpm nx format:write`                              | Formats the code with Prettier. CI runs `nx format:check`.                 |
+| Command                                                     | What it does                                                                                       |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `pnpm nx dev @codemancers/playground`                       | The playground at http://localhost:4200. Edits to the package reload live.                         |
+| `pnpm nx test @codemancers/sheets`                          | Unit tests (Vitest and Testing Library)                                                            |
+| `pnpm nx e2e @codemancers/playground-e2e`                   | End-to-end tests and the axe accessibility scan (Playwright)                                       |
+| `pnpm nx run-many -t lint test build typecheck e2e publint` | Every task CI runs. `publint` checks the package is ready to publish.                              |
+| `pnpm nx format:write`                                      | Formats the code with Prettier. CI runs `nx format:check`.                                         |
+| `pnpm nx sync:check`                                        | Checks that the TypeScript project references match the dependencies. `pnpm nx sync` updates them. |
+| `pnpm dlx knip@6`                                           | Finds unused files, exports and dependencies                                                       |
 
 ## How the package is organised
 
-- `packages/sheets/src/hooks`: the headless layer. It has no JSX and no styles: `useSheet`, the editing state, and the cell context.
+- `packages/sheets/src/hooks`: the headless layer. It has no JSX and no styles: `useSheet`, the editing state, the cell context and `useRowDrawer`.
 - `packages/sheets/src/ui`: components styled with Tailwind. Their colours come from the theme tokens in `src/styles.css`.
 - Entry points:
   - `src/index.ts`, published as `@codemancers/sheets`
@@ -37,8 +41,9 @@
 - **Styling:**
   - Use the theme tokens for colours (`bg-sheet-*`, `text-sheet-*`, `border-sheet-*`), never palette classes, so apps can restyle.
   - Use logical classes (`border-e`, `ps-2`, `end-0`, `text-start`) rather than left and right, so right-to-left layouts keep working.
-- **Text:** any text the sheet renders goes through the labels in `src/ui/labels.tsx`, so it can be translated.
+- **Text:** text the sheet renders itself goes through the labels in `src/ui/labels.tsx`. Text in a cell or hook is a prop or option with an English default, like `SheetPrimaryCell`'s `openLabel`. Either way, an app can translate it.
 - **New features:** add a demo to the playground and cover it in `apps/playground-e2e`.
+- **Decisions:** when you make a choice that a future contributor would question, add it to [docs/decisions.md](docs/decisions.md). If you change how state or data flows, update [docs/architecture.md](docs/architecture.md).
 
 ## Adding a cell type
 
