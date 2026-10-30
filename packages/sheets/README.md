@@ -399,7 +399,7 @@ function Tasks({ tasks }: { tasks: Task[] }) {
 
 ### Colours
 
-Every colour comes from a `--color-sheet-*` theme token, and each token has a `-dark` partner used under `dark:`. The defaults are Tailwind's zinc and blue palettes. To restyle, redefine tokens after the import:
+Every colour comes from a `--color-sheet-*` theme token. All but `accent` and `tooltip-fg` have a `-dark` partner, used under `dark:`. The defaults come from Tailwind's colour palette. To restyle, redefine tokens after the import:
 
 ```css
 @import 'tailwindcss';

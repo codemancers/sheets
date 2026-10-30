@@ -1,9 +1,6 @@
 export * from './sheet.js';
 export * from './sheet-header.js';
-// `./sheet-column` is intentionally NOT re-exported — it defines a
-// `SheetColumn` component used only by sheet-header internally, and the
-// name collides with the `SheetColumn<TData>` type from ./hooks/types
-// (which IS public surface for column definitions).
+// `./sheet-column` stays internal: `SheetHeader` renders it for each header.
 export * from './sheet-row.js';
 export * from './sheet-cell.js';
 export * from './sheet-row-number.js';
