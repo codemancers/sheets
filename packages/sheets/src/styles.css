@@ -17,9 +17,9 @@
  *     --color-sheet-bg-dark: var(--background);
  *   }
  *
- * Each colour has a -dark pair, applied through Tailwind's dark: variant, so
- * the app's dark-mode setting decides when it is used. The defaults are
- * Tailwind's zinc and blue scales.
+ * Each colour except accent and tooltip-fg has a -dark pair, applied through
+ * Tailwind's dark: variant, so the app's dark-mode setting decides when it is
+ * used. The defaults come from Tailwind's colour palette.
  */
 @theme {
   /* Surface and text. Borders and hover tints are fg at low opacity. */
