@@ -99,6 +99,39 @@ describe('useRowChanges', () => {
       });
     });
 
+    it('falls back to the plain message when fieldErrors is empty', async () => {
+      const { result } = setup(() => ({
+        error: 'Something went wrong',
+        fieldErrors: {},
+      }));
+
+      await act(() =>
+        result.current.rowChanges.stageCellValue('7', 'name', 'Renamed'),
+      );
+
+      expect(result.current.cellStatus.statuses[NAME]).toEqual({
+        kind: 'error',
+        message: 'Something went wrong',
+      });
+    });
+
+    // A field listed without a message says nothing about what is wrong.
+    it('falls back to the plain message when a field error is empty', async () => {
+      const { result } = setup(() => ({
+        error: 'Something went wrong',
+        fieldErrors: { name: [] },
+      }));
+
+      await act(() =>
+        result.current.rowChanges.stageCellValue('7', 'name', 'Renamed'),
+      );
+
+      expect(result.current.cellStatus.statuses[NAME]).toEqual({
+        kind: 'error',
+        message: 'Something went wrong',
+      });
+    });
+
     it('reports a transport failure on the cells it tried to save', async () => {
       const { result } = setup(() => {
         throw new Error('offline');
@@ -188,6 +221,41 @@ describe('useRowChanges', () => {
           () => ({
             error: 'Name taken',
             fieldErrors: { name: ['Name taken'] },
+          }),
+          { debounce: 500 },
+        );
+
+        act(() => {
+          void result.current.rowChanges.stageCellValue('7', 'name', 'Taken');
+          void result.current.rowChanges.stageCellValue(
+            '7',
+            'description',
+            'Fine',
+          );
+        });
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+
+        expect(result.current.cellStatus.statuses[NAME]).toEqual({
+          kind: 'error',
+          message: 'Name taken',
+        });
+        expect(result.current.cellStatus.statuses[DESC]).toEqual({
+          kind: 'dirty',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('leaves a field listed without a message dirty, not saving', async () => {
+      vi.useFakeTimers();
+      try {
+        const { result } = setup(
+          () => ({
+            error: 'Name taken',
+            fieldErrors: { name: ['Name taken'], description: [] },
           }),
           { debounce: 500 },
         );
