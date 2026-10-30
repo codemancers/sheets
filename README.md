@@ -14,12 +14,12 @@ A spreadsheet-style data grid for React, built on [TanStack Table](https://tanst
 
 ## Repository layout
 
-| Path                  | Contents                                                                      |
-| --------------------- | ----------------------------------------------------------------------------- |
-| `packages/sheets`     | The `@codemancers/sheets` package                                             |
-| `apps/playground`     | A Vite app with a demo of every feature. The end-to-end tests run against it. |
-| `apps/playground-e2e` | Playwright tests, including an axe accessibility scan                         |
-| `docs/images`         | Images used by the READMEs                                                    |
+| Path                  | Contents                                                                                         |
+| --------------------- | ------------------------------------------------------------------------------------------------ |
+| `packages/sheets`     | The `@codemancers/sheets` package                                                                |
+| `apps/playground`     | A Vite app with a demo of every feature. The end-to-end tests run against it.                    |
+| `apps/playground-e2e` | Playwright tests, including an axe accessibility scan                                            |
+| `docs`                | [Architecture](docs/architecture.md), [decisions](docs/decisions.md), and images for the READMEs |
 
 ## Development
 
@@ -27,8 +27,8 @@ You need Node 24 and pnpm; the pnpm version is pinned in `package.json`.
 
 ```sh
 pnpm install
-pnpm nx dev @codemancers/playground                 # http://localhost:4200
-pnpm nx run-many -t lint test build typecheck e2e   # everything CI runs
+pnpm nx dev @codemancers/playground                         # http://localhost:4200
+pnpm nx run-many -t lint test build typecheck e2e publint   # every task CI runs
 ```
 
 Each demo in the playground has a full-screen button. To open one directly, add `?full=<demo>` to the URL, for example http://localhost:4200/?full=editing.
