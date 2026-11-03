@@ -30,7 +30,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 
 ## Install
 
-You need React 18.2+ or 19 and TanStack Table v8. The components also need Tailwind CSS v4. The hooks alone don't.
+You need React 19 and TanStack Table v8. The components also need Tailwind CSS v4. The hooks alone don't.
 
 ```sh
 pnpm add @codemancers/sheets @tanstack/react-table
