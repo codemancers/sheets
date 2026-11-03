@@ -43,7 +43,17 @@ describe('SheetPrimaryCell', () => {
   it('lets modified clicks fall through to native navigation', () => {
     const onOpen = renderCell();
     const link = screen.getByRole('link', { name: 'Project Seven' });
-    const navigated = fireEvent.click(link, { metaKey: true });
+    // Runs after the cell's handler. jsdom can't navigate, and logs an error
+    // when asked to, so the navigation is cancelled once the cell has let it
+    // through.
+    let navigated = false;
+    const stopNavigation = (event: Event) => {
+      navigated = !event.defaultPrevented;
+      event.preventDefault();
+    };
+    window.addEventListener('click', stopNavigation);
+    fireEvent.click(link, { metaKey: true });
+    window.removeEventListener('click', stopNavigation);
     expect(onOpen).not.toHaveBeenCalled();
     expect(navigated).toBe(true); // default not prevented
   });

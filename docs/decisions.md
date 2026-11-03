@@ -11,6 +11,7 @@ When you make a choice that a future contributor would question, add it here.
 - **No runtime dependencies.** The icons are inlined from Heroicons and Lucide, with their licence notices, and a small `cx` helper replaces `clsx`.
 - **TanStack Table is a peer dependency.** Apps import `createColumnHelper` and TanStack's types themselves, and extend `ColumnMeta` and `TableMeta` through module augmentation. Under pnpm an app can only augment a module it has installed. A peer dependency also keeps a single copy of TanStack in the app.
 - **TanStack Table v8.** Moving to v9 is planned for a later release.
+- **React 19 only.** The apps that use the package are on React 19, so React 18 isn't tested or supported.
 - **The components need Tailwind v4.** They're styled with Tailwind classes, and `styles.css` adds those classes to the app's Tailwind build, so there's no separate stylesheet to load or override. An app without Tailwind can add it, or build its own markup on the headless layer.
 - **The package ships its source.** `styles.css` contains `@source './'`, which makes the app's Tailwind build scan the package's source files for class names. That only works if `src/` is published.
 
