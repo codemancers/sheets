@@ -4,7 +4,7 @@ A spreadsheet-style data grid for React, built on [TanStack Table](https://tanst
 
 ![A sheet with a saved edit, and a refused one showing its reason](docs/images/sheet.png)
 
-> **Status:** pre-release. The package isn't on npm yet.
+> **Status:** early. Until 1.0, a minor version can include breaking changes.
 
 ## Packages
 

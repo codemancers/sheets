@@ -197,3 +197,5 @@ With the immediate flush there's no unsaved state: a cell goes from saving to sa
   2. `nx format:check`
   3. knip
   4. `nx affected -t lint test build typecheck e2e publint`, against `main`
+
+- **Releases** (`.github/workflows/release.yml`) run when a GitHub release is published. The workflow checks that the tag matches the package version, tests and builds the package, and publishes it to npm through trusted publishing.

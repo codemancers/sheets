@@ -58,4 +58,8 @@
 
 ## Releases
 
-Not set up yet: the package isn't published.
+Maintainers release from `main`:
+
+1. In a pull request, bump `version` in `packages/sheets/package.json`. Until 1.0, a breaking change bumps the minor version, and anything else bumps the patch version.
+2. Once it's merged, publish a GitHub release for that version: `gh release create v0.2.0 --generate-notes`.
+3. The [Release workflow](.github/workflows/release.yml) checks that the tag matches the version, then tests, builds and publishes the package to npm. npm trusts that workflow through [trusted publishing](https://docs.npmjs.com/trusted-publishers), so there's no npm token to store or rotate.
