@@ -1,6 +1,6 @@
 {
   "name": "@codemancers/sheets",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Spreadsheet-style data grid for React: headless hooks on TanStack Table, plus Tailwind v4 components.",
   "license": "MIT",
   "repository": {

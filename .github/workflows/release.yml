@@ -1,0 +1,47 @@
+name: Release
+
+# Publishes @codemancers/sheets to npm when a GitHub release is published.
+# npm trusts this workflow (trusted publishing), so there's no npm token.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+
+      # No dependency cache: a release builds from a clean install.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag matches the package version
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./packages/sheets/package.json').version")"
+
+      - run: pnpm exec nx run-many -t test build publint -p @codemancers/sheets
+
+      # 0.1.0 was published by hand: npm can only trust a workflow for a
+      # package that already exists.
+      - name: Publish, unless this version is already on npm
+        working-directory: packages/sheets
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@codemancers/sheets@$version" version > /dev/null 2>&1; then
+            echo "@codemancers/sheets@$version is already on npm."
+          else
+            npm publish
+          fi

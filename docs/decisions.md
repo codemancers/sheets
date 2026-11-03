@@ -89,3 +89,6 @@ When you make a choice that a future contributor would question, add it here.
 - **knip checks for dead code in CI.**
 - **pnpm is pinned** through `packageManager` in `package.json`.
 - **Prettier skips `pnpm-lock.yaml`,** so pnpm is the only thing that writes it.
+- **Releases publish from GitHub Actions through npm's trusted publishing.** No npm token is stored, so there's none to leak or rotate.
+- **A GitHub release starts a release, not Nx Release.** Nx Release versions, commits and tags in one local step, but every change here goes through a pull request. So the version is bumped in a pull request, and publishing a GitHub release afterwards also gives each version its release notes.
+- **0.x until the API settles.** Until 1.0, a breaking change bumps the minor version.

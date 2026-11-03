@@ -72,6 +72,7 @@ pnpm nx format:write
   - Keep a pull request to a few commits, grouped by kind.
 - **PR descriptions:** fill in `.github/pull_request_template.md`, briefly.
 - **No AI attribution:** no `Co-Authored-By` trailers, and no "Generated with" lines in commits or pull requests.
+- **Releases:** maintainers cut them, as CONTRIBUTING.md describes. Don't bump the version, publish to npm or create a GitHub release unless asked.
 
 ## Gotchas
 
