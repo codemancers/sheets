@@ -31,3 +31,10 @@ export interface StandardSchemaV1<Input = unknown, Output = Input> {
  * reported on the cell with the first issue's message.
  */
 export type SheetCellValidator = StandardSchemaV1;
+
+/**
+ * What an editable cell's `onCommit` reports back. `void`, or no `error`, is
+ * success. An `error` is shown on the cell the way a refused value is: the
+ * typed value stays on screen, so it can be fixed and retried.
+ */
+export type CellCommitResult = void | { error?: string };

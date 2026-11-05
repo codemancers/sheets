@@ -34,6 +34,9 @@ When you make a choice that a future contributor would question, add it here.
 - **Errors stay until the user acts on them.** An error describes something that's still true: the value wasn't saved. So it doesn't expire. The saved tick clears after 2 seconds.
 - **A refused value stays on screen.** The cell keeps showing what was typed, next to its error, so a typo is fixed rather than retyped. Committing it again retries the save, even though it hasn't changed.
 - **Statuses and staged values live above the table,** in `useCellStatus` and `useRowChanges`. Rows unmount when the data is sorted or refetched, and an unsaved edit has to survive that.
+- **Every sheet has a `cellStatus`.** `useSheet` creates one when the app passes none, so a schema always runs and a failure always has somewhere to show. Apps that save per row still pass their own, because `useRowChanges` reports to the same instance.
+- **A failed `onCommit` shows like a refused value.** `onCommit` can return `{ error }`, or throw. The editor still closes, and the cell shows the error with the typed value kept for a retry. That's the model existing rows already use, and it works for a new row too. Keeping the editor open instead would put the error icon over the text being typed.
+- **`onCancel` means the edit ended with nothing to save.** Escape calls it, and so do Enter and blur with the value unchanged. A new row left empty then removes itself, instead of sitting there until someone finds Escape.
 - **Saves go per row.** A cell hands its value to `useRowChanges`, and the app's `onSubmitRow` writes the row. Whether each edit is sent at once (the default) or after a pause is then a flush setting, not a different design.
 - **One write per row at a time.** Two writes to the same row can land in either order, and the older value can win. A flush waits for the row's write in flight.
 - **A refused write leaves all its fields unsaved.** The API applies a row's fields in one write, so a clash on one field means none of them were saved.
@@ -53,6 +56,7 @@ When you make a choice that a future contributor would question, add it here.
 
 - **Column widths live in one CSS variable.** The root sets `--sheet-columns`, and every row lays out on it. Resizing a column changes that one value, instead of a prop on every row.
 - **The body doesn't re-render while a column is dragged.** This is TanStack's advice for live resizing. It needs `useCellStatus` and `useRowChanges` to return memoised objects, so they do.
+- **New rows stay put through TanStack's row pinning,** not a new-row API. The body renders pinned top and bottom rows around the rest, and an app pins its new row to the bottom, so a sort can't move it. That keeps the plain TanStack API, and works for any row an app wants fixed.
 - **No virtualization yet.** Every row is rendered. The playground's 1,000-row demo shows how that performs. Virtualization is planned for a later release.
 - **No empty gridlines below the last row.** When the rows don't fill the sheet, the space below them stays blank, since empty cells would look like rows that exist.
 

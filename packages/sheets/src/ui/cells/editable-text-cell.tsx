@@ -1,13 +1,25 @@
 'use client';
 
 import { cx } from '../cx.js';
+import { useSheetLabels } from '../labels.js';
 import { useInlineEdit } from '../../hooks/use-inline-edit.js';
-import type { SheetCellValidator } from '../../hooks/types.js';
+import type {
+  CellCommitResult,
+  SheetCellValidator,
+} from '../../hooks/types.js';
 import { useSheetCellEditing } from '../../hooks/use-cell-editing.js';
 
 export type SheetEditableTextCellProps = {
   value: string;
-  onCommit?: (next: string) => void | Promise<void>;
+  /**
+   * Saves the new value. Return `{ error }`, or throw, and the failure is
+   * shown on this cell with the typed value kept, to be fixed and retried.
+   */
+  onCommit?: (next: string) => CellCommitResult | Promise<CellCommitResult>;
+  /**
+   * The edit ended with nothing to save: Escape, or Enter or blur with the
+   * value unchanged. A new row uses it to remove itself.
+   */
   onCancel?: () => void;
   placeholder?: string;
   className?: string;
@@ -46,14 +58,25 @@ export function SheetEditableTextCell({
   stage = false,
 }: SheetEditableTextCellProps) {
   const cell = useSheetCellEditing(schema);
+  const labels = useSheetLabels();
   const staging = stage && cell.canStage;
-  const pending = (staging ? cell.stagedValue : undefined) ?? cell.refusedValue;
+  const pending =
+    cell.submittingValue ??
+    (staging ? cell.stagedValue : undefined) ??
+    cell.refusedValue;
   const displayValue = pending === undefined ? (value ?? '') : String(pending);
+
+  // Nothing to save: drop whatever this cell was holding on to, and tell the
+  // app, so a new row can remove itself.
+  const end = () => {
+    cell.abandon();
+    onCancel?.();
+  };
 
   const commit = async (next: string) => {
     // Back to the saved value: nothing to send, and any refused value goes.
     if (next === value) {
-      cell.abandon();
+      end();
       return;
     }
     const verdict = cell.accepts(next);
@@ -62,7 +85,7 @@ export function SheetEditableTextCell({
       await cell.stage(next);
       return;
     }
-    await onCommit?.(next);
+    await cell.submit(onCommit, next, labels.saveFailed);
   };
 
   const { isEditing, beginEdit, triggerRef, inputProps } =
@@ -70,10 +93,7 @@ export function SheetEditableTextCell({
       value: displayValue,
       dirty: pending !== undefined,
       onCommit: commit,
-      onCancel: () => {
-        cell.abandon();
-        onCancel?.();
-      },
+      onCancel: end,
       autoFocus,
     });
 

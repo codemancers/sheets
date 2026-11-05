@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react';
+import type { CellCommitResult } from '../../hooks/types.js';
 import { SheetEditableTextCell } from './editable-text-cell.js';
 import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
@@ -34,14 +41,26 @@ describe('SheetEditableTextCell', () => {
   });
 
   // Callers must not rely on onCommit to learn that editing ended.
-  it('does not call onCommit when the value is unchanged', () => {
-    const { onCommit } = renderCell();
+  // Nothing to save ends the edit the way Escape does, so a new row that was
+  // never filled in can go away.
+  it('calls onCancel, not onCommit, when Enter leaves the value unchanged', () => {
+    const { onCommit, onCancel } = renderCell();
 
     fireEvent.keyDown(screen.getByDisplayValue('Project One'), {
       key: 'Enter',
     });
 
     expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onCancel, not onCommit, when focus leaves an unchanged value', () => {
+    const { onCommit, onCancel } = renderCell();
+
+    fireEvent.blur(screen.getByDisplayValue('Project One'));
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   // Japanese, Chinese and Korean input confirm a composition with Enter.
@@ -264,6 +283,160 @@ describe('SheetEditableTextCell', () => {
       fireEvent.keyDown(input, { key: 'Enter' });
 
       expect(onCommit).toHaveBeenCalledWith('');
+    });
+  });
+
+  // What onCommit reports back, shown on the cell the way a refused value is.
+  describe('commit results', () => {
+    function ResultHarness({
+      value = 'Task Seven',
+      onCommit,
+      onCancel,
+    }: {
+      value?: string;
+      onCommit: (next: string) => CellCommitResult | Promise<CellCommitResult>;
+      onCancel?: () => void;
+    }) {
+      const cellStatus = useCellStatus();
+      return (
+        <div role="row">
+          <SheetCellProvider
+            value={{ rowId: '7', columnId: 'title', cellStatus }}
+          >
+            <SheetEditableTextCell
+              value={value}
+              onCommit={onCommit}
+              onCancel={onCancel}
+              placeholder="New task"
+            />
+          </SheetCellProvider>
+          <output data-testid="status">
+            {JSON.stringify(cellStatus.statuses)}
+          </output>
+        </div>
+      );
+    }
+
+    const editTo = (opener: string, next: string) => {
+      fireEvent.click(screen.getByRole('button', { name: opener }));
+      const input = screen.getByRole('textbox');
+      fireEvent.change(input, { target: { value: next } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+    };
+
+    it('shows the error onCommit returns, keeping the typed value', async () => {
+      render(
+        <ResultHarness
+          onCommit={async () => ({ error: 'That name is taken' })}
+        />,
+      );
+
+      editTo('Task Seven', 'Taken');
+
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'That name is taken',
+        ),
+      );
+      expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy();
+    });
+
+    it('shows the save-failed message when onCommit throws', async () => {
+      render(
+        <ResultHarness
+          onCommit={async () => {
+            throw new Error('offline');
+          }}
+        />,
+      );
+
+      editTo('Task Seven', 'Renamed Seven');
+
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'Could not save. Check your connection.',
+        ),
+      );
+      expect(
+        screen.getByRole('button', { name: 'Renamed Seven' }),
+      ).toBeTruthy();
+    });
+
+    // Otherwise the cell flashes back to the old value, or to the placeholder
+    // on a new row, until the app's data catches up.
+    it('keeps the typed value on screen while onCommit runs', async () => {
+      let finish: (() => void) | undefined;
+      render(
+        <ResultHarness
+          onCommit={() =>
+            new Promise<void>((resolve) => {
+              finish = resolve;
+            })
+          }
+        />,
+      );
+
+      editTo('Task Seven', 'Renamed Seven');
+      expect(
+        screen.getByRole('button', { name: 'Renamed Seven' }),
+      ).toBeTruthy();
+
+      await act(async () => finish?.());
+      expect(screen.getByRole('button', { name: 'Task Seven' })).toBeTruthy();
+    });
+
+    it('retries a refused value committed again unchanged', async () => {
+      const onCommit = vi
+        .fn<(next: string) => Promise<CellCommitResult>>()
+        .mockResolvedValueOnce({ error: 'That name is taken' })
+        .mockResolvedValueOnce(undefined);
+      render(<ResultHarness onCommit={onCommit} />);
+
+      editTo('Task Seven', 'Taken');
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy(),
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Taken' }));
+      fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' });
+
+      await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(2));
+      expect(onCommit).toHaveBeenLastCalledWith('Taken');
+    });
+
+    describe('on a new row', () => {
+      it('ends with onCancel when left empty', () => {
+        const onCommit = vi.fn();
+        const onCancel = vi.fn();
+        render(
+          <ResultHarness value="" onCommit={onCommit} onCancel={onCancel} />,
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'New task' }));
+        fireEvent.blur(screen.getByRole('textbox'));
+
+        expect(onCommit).not.toHaveBeenCalled();
+        expect(onCancel).toHaveBeenCalledTimes(1);
+      });
+
+      it('ends with onCancel when a refused name is cleared', async () => {
+        const onCancel = vi.fn();
+        render(
+          <ResultHarness
+            value=""
+            onCommit={async () => ({ error: 'That name is taken' })}
+            onCancel={onCancel}
+          />,
+        );
+
+        editTo('New task', 'Taken');
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy(),
+        );
+        editTo('Taken', '');
+
+        expect(onCancel).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('status').textContent).toBe('{}');
+      });
     });
   });
 

@@ -12,6 +12,10 @@ import {
 export type UseInlineEditOptions<T> = {
   value: T;
   onCommit?: (next: T) => void | Promise<void>;
+  /**
+   * The edit ended with nothing to save: Escape, or Enter or blur with the
+   * value unchanged. A new row uses it to remove itself.
+   */
   onCancel?: () => void;
   /** Start in edit mode, e.g. for the first cell of a newly added row. */
   autoFocus?: boolean;
@@ -61,8 +65,12 @@ export function useInlineEdit<T extends string>({
     setIsEditing(false);
     if (dirty || draft !== value) {
       await onCommit?.(draft);
+    } else {
+      // Nothing to save ends the edit the way Escape does, so a new row that
+      // was never filled in goes away rather than sitting there empty.
+      onCancel?.();
     }
-  }, [draft, value, onCommit, dirty]);
+  }, [draft, value, onCommit, onCancel, dirty]);
 
   const cancel = useCallback(() => {
     if (committedRef.current) return;

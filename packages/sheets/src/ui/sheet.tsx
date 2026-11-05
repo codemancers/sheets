@@ -1,7 +1,7 @@
 'use client';
 
 import { cx } from './cx.js';
-import { memo, type CSSProperties, type ReactNode } from 'react';
+import { memo, useMemo, type CSSProperties, type ReactNode } from 'react';
 import type { Row, RowData } from '@tanstack/react-table';
 import type { SheetInstance } from '../hooks/use-sheet.js';
 import type { CellStatusState } from '../hooks/use-cell-status.js';
@@ -128,7 +128,17 @@ export function Sheet<TData extends RowData>({
     '--sheet-columns': `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`,
   } as CSSProperties;
 
-  const rows = table.getRowModel().rows;
+  // Rows pinned with TanStack's row pinning, such as a new row being filled
+  // in, stay at the top or bottom whatever the sort. TanStack memoises all
+  // three lists, so the combined one keeps its identity for SheetBody's memo.
+  const top = table.getTopRows();
+  const center = table.getCenterRows();
+  const bottom = table.getBottomRows();
+  const rows = useMemo(
+    () =>
+      top.length || bottom.length ? [...top, ...center, ...bottom] : center,
+    [top, center, bottom],
+  );
 
   return (
     <SheetLabelsProvider value={text}>

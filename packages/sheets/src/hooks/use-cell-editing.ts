@@ -1,6 +1,11 @@
 'use client';
 
-import type { SheetCellValidator, StandardSchemaV1Result } from './types.js';
+import { useState } from 'react';
+import type {
+  CellCommitResult,
+  SheetCellValidator,
+  StandardSchemaV1Result,
+} from './types.js';
 import { useSheetCellScope } from './cell-context.js';
 
 /**
@@ -93,15 +98,71 @@ export function useSheetCellEditing(schema?: SheetCellValidator) {
       ? rowChanges.stageCellValue(scope.rowId, scope.columnId, next)
       : Promise.resolve();
 
+  // A value handed to an async onCommit, shown until the write settles, so
+  // the cell doesn't flash back to the old value, or to a new row's
+  // placeholder, while the request runs.
+  const [submittingValue, setSubmittingValue] = useState<unknown>();
+
+  /**
+   * Hands the value to the app's `onCommit`, and reports a failure on this
+   * cell: the `error` it returns, or `failedMessage` if it throws. Either way
+   * the value stays on screen as a refused value, to be fixed and retried.
+   * With no Sheet to report to, a thrown error is passed on. Like `accepts`,
+   * a synchronous handler gets a synchronous answer.
+   */
+  const submit = <T>(
+    onCommit:
+      ((next: T) => CellCommitResult | Promise<CellCommitResult>) | undefined,
+    next: T,
+    failedMessage: string,
+  ): void | Promise<void> => {
+    if (!onCommit) return;
+    const report = (result: CellCommitResult) => {
+      if (result && result.error && scope && cellStatus) {
+        cellStatus.rejectCellValue(
+          scope.rowId,
+          scope.columnId,
+          result.error,
+          next,
+        );
+      }
+    };
+    const fail = (error: unknown) => {
+      if (!scope || !cellStatus) throw error;
+      report({ error: failedMessage });
+    };
+
+    let outcome: CellCommitResult | Promise<CellCommitResult>;
+    try {
+      outcome = onCommit(next);
+    } catch (error) {
+      fail(error);
+      return;
+    }
+    if (!(outcome instanceof Promise)) {
+      report(outcome);
+      return;
+    }
+    // Reported before the value is released, so the cell never shows the old
+    // value in between.
+    setSubmittingValue(next);
+    return outcome
+      .then(report, fail)
+      .finally(() => setSubmittingValue(undefined));
+  };
+
   return {
     /** The column's header text, to name the editor for assistive tech. */
     label: scope?.columnLabel,
     refusedValue,
     stagedValue,
+    /** The value being saved through `submit`, until the save settles. */
+    submittingValue,
     accepts,
     clearOnEditStart,
     abandon,
     canStage,
     stage,
+    submit,
   };
 }

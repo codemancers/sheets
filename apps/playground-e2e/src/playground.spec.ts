@@ -218,13 +218,71 @@ test.describe('full screen', () => {
   });
 });
 
-test('adds a row from the footer', async ({ page }) => {
-  const region = demo(page, 'Adding rows');
-  // Header, three tasks and the add-row footer.
-  await expect(region.getByRole('row')).toHaveCount(5);
-  await region.getByRole('button', { name: 'Add task' }).click();
-  await expect(region.getByRole('row')).toHaveCount(6);
-  await expect(region.getByRole('link', { name: 'New task 4' })).toBeVisible();
+test.describe('adding rows', () => {
+  test('creates a task from the new row', async ({ page }) => {
+    const region = demo(page, 'Adding rows');
+    // Header, three tasks and the add-row footer.
+    await expect(region.getByRole('row')).toHaveCount(5);
+
+    await region.getByRole('button', { name: 'Add task' }).click();
+    const title = region.getByRole('textbox', { name: 'Title' });
+    await expect(title).toBeFocused();
+    await title.fill('Write the changelog');
+    await title.press('Enter');
+
+    await expect(
+      region.getByRole('link', { name: 'Write the changelog' }),
+    ).toBeVisible();
+    await expect(region.getByRole('row')).toHaveCount(6);
+  });
+
+  test('discards an empty new row on Enter or clicking away', async ({
+    page,
+  }) => {
+    const region = demo(page, 'Adding rows');
+    const add = region.getByRole('button', { name: 'Add task' });
+
+    await add.click();
+    await region.getByRole('textbox', { name: 'Title' }).press('Enter');
+    await expect(region.getByRole('row')).toHaveCount(5);
+
+    await add.click();
+    await region.getByRole('textbox', { name: 'Title' }).blur();
+    await expect(region.getByRole('row')).toHaveCount(5);
+  });
+
+  test('shows why a create was refused, and retries it', async ({ page }) => {
+    const region = demo(page, 'Adding rows');
+    await region.getByRole('button', { name: 'Add task' }).click();
+    const title = region.getByRole('textbox', { name: 'Title' });
+    await title.fill('taken');
+    await title.press('Enter');
+
+    await expect(
+      region.getByRole('button', { name: 'That name is taken' }),
+    ).toBeVisible();
+    // The typed title stays, so it's fixed rather than retyped.
+    await region.getByRole('button', { name: 'taken', exact: true }).click();
+    const retry = region.getByRole('textbox', { name: 'Title' });
+    await expect(retry).toHaveValue('taken');
+    await retry.fill('Plan the launch');
+    await retry.press('Enter');
+
+    await expect(
+      region.getByRole('link', { name: 'Plan the launch' }),
+    ).toBeVisible();
+  });
+
+  test('keeps the new row at the bottom while sorted', async ({ page }) => {
+    const region = demo(page, 'Adding rows');
+    await region.getByRole('button', { name: 'Sort Title' }).click();
+    await region.getByRole('button', { name: 'Add task' }).click();
+
+    // The footer hides while adding, so the new row is the last row.
+    await expect(
+      region.getByRole('row').last().getByRole('textbox', { name: 'Title' }),
+    ).toBeVisible();
+  });
 });
 
 test('shows loading and empty states', async ({ page }) => {

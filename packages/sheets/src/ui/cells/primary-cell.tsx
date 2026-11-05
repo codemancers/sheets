@@ -2,9 +2,13 @@
 
 import { cx } from '../cx.js';
 import { ArrowUpRight, PanelRight } from '../icons.js';
+import { useSheetLabels } from '../labels.js';
 import type { MouseEvent, ReactNode } from 'react';
 import { useInlineEdit } from '../../hooks/use-inline-edit.js';
-import type { SheetCellValidator } from '../../hooks/types.js';
+import type {
+  CellCommitResult,
+  SheetCellValidator,
+} from '../../hooks/types.js';
 import { useSheetCellEditing } from '../../hooks/use-cell-editing.js';
 
 type LinkLikeProps = {
@@ -26,12 +30,14 @@ export type SheetPrimaryCellEditable = {
   value: string;
   /**
    * Called with the new text. Skipped when the value came back unchanged.
+   * Return `{ error }`, or throw, and the failure is shown on this cell with
+   * the typed text kept, to be fixed and retried.
    *
    * Not used when the Sheet stages writes (`useRowChanges`): the value is handed
    * to the row's buffer and the row's `onSubmitRow` performs the write, so a
    * per-cell request would duplicate it. Optional for that reason.
    */
-  onCommit?: (next: string) => void | Promise<void>;
+  onCommit?: (next: string) => CellCommitResult | Promise<CellCommitResult>;
   placeholder?: string;
   /**
    * Checked before `onCommit`; a failure is reported on this cell instead, so
@@ -50,9 +56,10 @@ export type SheetPrimaryCellEditable = {
    */
   onEditStart?: () => void;
   /**
-   * Extra work on Escape. Inside a Sheet the retained value and the status are
-   * both dropped for you, so the cell cannot be left showing something that was
-   * never saved.
+   * Extra work when the edit ends with nothing to save: Escape, or Enter or
+   * blur with the text unchanged. Inside a Sheet the retained value and the
+   * status are both dropped for you, so the cell cannot be left showing
+   * something that was never saved.
    */
   onCancel?: () => void;
 };
@@ -125,16 +132,24 @@ export function SheetPrimaryCell({
   editable,
 }: SheetPrimaryCellProps) {
   const cell = useSheetCellEditing(editable?.schema);
-  const pending = cell.stagedValue ?? cell.refusedValue;
+  const labels = useSheetLabels();
+  const pending = cell.submittingValue ?? cell.stagedValue ?? cell.refusedValue;
   const value =
     pending === undefined ? (editable?.value ?? '') : String(pending);
+
+  // Nothing to save: drop whatever this cell was holding on to, and tell the
+  // app.
+  const end = () => {
+    cell.abandon();
+    editable?.onCancel?.();
+  };
 
   const commit = async (next: string) => {
     if (!editable) return;
     // Back to the saved value: nothing to send, and any refused or staged
     // value goes.
     if (next === editable.value) {
-      cell.abandon();
+      end();
       return;
     }
     const verdict = cell.accepts(next);
@@ -145,7 +160,7 @@ export function SheetPrimaryCell({
       await cell.stage(next);
       return;
     }
-    await editable.onCommit?.(next);
+    await cell.submit(editable.onCommit, next, labels.saveFailed);
   };
 
   const { isEditing, beginEdit, triggerRef, inputProps } =
@@ -153,10 +168,7 @@ export function SheetPrimaryCell({
       value,
       dirty: pending !== undefined,
       onCommit: commit,
-      onCancel: () => {
-        cell.abandon();
-        editable?.onCancel?.();
-      },
+      onCancel: end,
     });
 
   if (editable && isEditing) {
