@@ -127,6 +127,49 @@ describe('Sheet', () => {
     expect(beta.getAttribute('aria-current')).toBe('true');
   });
 
+  // A new row being filled in is pinned to the bottom with TanStack's row
+  // pinning, so a sort can't move it away from the add-row button.
+  describe('pinned rows', () => {
+    const rowPinning = { top: [], bottom: ['new'] };
+
+    function WithNewRow({ data }: { data: Row[] }) {
+      const sheet = useSheet({
+        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        data,
+        getRowId: (row) => (row.id === 0 ? 'new' : String(row.id)),
+        state: { rowPinning },
+        initialState: { sorting: [{ id: 'name', desc: false }] },
+      });
+      return <Sheet instance={sheet} emptyState="No rows yet." />;
+    }
+
+    it('keeps a bottom-pinned row last, whatever the sort', () => {
+      render(
+        <WithNewRow
+          data={[
+            { id: 1, name: 'Charlie' },
+            { id: 0, name: '' },
+            { id: 2, name: 'Alpha' },
+          ]}
+        />,
+      );
+
+      const [, ...rows] = screen.getAllByRole('row');
+      expect(rows.map((row) => row.textContent)).toEqual([
+        '1Alpha',
+        '2Charlie',
+        '3',
+      ]);
+    });
+
+    it('shows a pinned row instead of the empty state', () => {
+      render(<WithNewRow data={[{ id: 0, name: '' }]} />);
+
+      expect(screen.queryByText('No rows yet.')).toBeNull();
+      expect(screen.getAllByRole('row')).toHaveLength(2);
+    });
+  });
+
   describe('accessibility', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<Task>();
