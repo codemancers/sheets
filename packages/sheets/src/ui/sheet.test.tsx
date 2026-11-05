@@ -4,7 +4,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { useSheet } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 import { SheetEditableTextCell } from './cells/editable-text-cell.js';
-import type { SheetLabels } from './labels.js';
+import { useSheetLabels, type SheetLabels } from './labels.js';
 
 type Row = { id: number; name: string };
 const rowColumn = createColumnHelper<Row>();
@@ -315,6 +315,77 @@ describe('Sheet', () => {
 
   // TanStack's advice for live resizing: only the header and the column
   // widths should change while a column is dragged.
+  // Apps usually pass labels inline, a new object on every render. The merged
+  // labels must stay the same object, or everything that reads them, such as
+  // each row's number cell, re-renders on every frame of a drag.
+  it('keeps label readers still during a drag when labels are inline', () => {
+    type Task = { id: string; title: string };
+    const taskColumn = createColumnHelper<Task>();
+    const labelReads = vi.fn();
+    function ReadsLabels() {
+      useSheetLabels();
+      labelReads();
+      return null;
+    }
+    const columns = [
+      taskColumn.accessor('title', {
+        header: 'Title',
+        size: 200,
+        cell: () => <ReadsLabels />,
+      }),
+    ];
+    const data = [{ id: '1', title: 'Alpha' }];
+    function DragSheet() {
+      const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
+      return <Sheet instance={sheet} labels={{ addRow: 'Add task' }} />;
+    }
+    render(<DragSheet />);
+    const handle = screen.getByRole('separator', { name: 'Resize Title' });
+
+    fireEvent.mouseDown(handle, { clientX: 100 });
+    const before = labelReads.mock.calls.length;
+    fireEvent.mouseMove(document, { clientX: 140 });
+    fireEvent.mouseMove(document, { clientX: 180 });
+
+    expect(labelReads.mock.calls.length).toBe(before);
+    fireEvent.mouseUp(document, { clientX: 180 });
+  });
+
+  it('updates its labels when their values change', () => {
+    function Labelled({ addRow }: { addRow: string }) {
+      const sheet = useSheet({
+        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        data: [],
+      });
+      return <Sheet instance={sheet} onAddRow={vi.fn()} labels={{ addRow }} />;
+    }
+    const { rerender } = render(<Labelled addRow="Add task" />);
+
+    rerender(<Labelled addRow="Add item" />);
+
+    expect(screen.getByRole('button', { name: 'Add item' })).toBeTruthy();
+  });
+
+  // Tests in apps can find the highlighted row without asserting on a class.
+  it('marks the highlighted row with data-highlighted', () => {
+    function Highlighted() {
+      const sheet = useSheet({
+        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        data: [
+          { id: 1, name: 'Alpha' },
+          { id: 2, name: 'Beta' },
+        ],
+        getRowId: (row) => String(row.id),
+      });
+      return <Sheet instance={sheet} highlightedRowId="2" />;
+    }
+    render(<Highlighted />);
+
+    const [, alpha, beta] = screen.getAllByRole('row');
+    expect(alpha.hasAttribute('data-highlighted')).toBe(false);
+    expect(beta.getAttribute('data-highlighted')).toBe('true');
+  });
+
   it('does not re-render the rows while a column is dragged', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<Task>();

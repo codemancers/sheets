@@ -156,6 +156,16 @@ describe('SheetPrimaryCell', () => {
 
     // The whole point of the mode: a click edits rather than navigates. Rendered
     // as a button, not a link — a link whose click edits would mislead AT users.
+    // After Enter or Escape, focus returns to the name. Filling the cell up to
+    // the icons makes its focus ring outline the cell, not hug the text.
+    it('lets the editable name fill the cell up to the icons', () => {
+      renderEditable();
+
+      expect(
+        screen.getByRole('button', { name: 'Project Seven' }).className,
+      ).toContain('flex-1');
+    });
+
     it('starts an in-place edit on plain click, without opening the row', () => {
       const { onOpen } = renderEditable();
 

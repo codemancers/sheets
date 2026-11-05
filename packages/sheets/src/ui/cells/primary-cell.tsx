@@ -191,7 +191,8 @@ export function SheetPrimaryCell({
       {editable ? (
         // Plain text, not link-blue: the click edits rather than navigates, and
         // blue would promise navigation. `cursor-text` is the tell, same as
-        // SheetEditableTextCell.
+        // SheetEditableTextCell. It fills the cell up to the icons, so the
+        // focus ring that returns after Enter or Escape outlines the cell.
         <button
           ref={triggerRef}
           type="button"
@@ -200,7 +201,7 @@ export function SheetPrimaryCell({
             editable.onEditStart?.();
             beginEdit();
           }}
-          className="block min-w-0 cursor-text truncate px-2 py-1.5 text-start text-sm text-sheet-fg dark:text-sheet-fg-dark"
+          className="block min-w-0 flex-1 cursor-text truncate px-2 py-1.5 text-start text-sm text-sheet-fg dark:text-sheet-fg-dark"
         >
           {/* An empty value means a refused edit is still on screen, so show the
               placeholder rather than a blank cell that reads as broken. When a

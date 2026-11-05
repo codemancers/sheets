@@ -76,6 +76,8 @@ export function SheetRow<TData>({
       ref={ref}
       role="row"
       aria-current={open || undefined}
+      // For tests in apps, which can't see a highlight by its colour.
+      data-highlighted={highlight || undefined}
       className={cx(
         'grid scroll-mb-16 transition-colors duration-1000',
         highlight
