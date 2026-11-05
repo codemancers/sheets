@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { CellCommitResult } from '../../hooks/types.js';
 import { SheetPrimaryCell } from './primary-cell.js';
 import { SheetCellProvider } from '../../hooks/cell-context.js';
 import { useCellStatus } from '../../hooks/use-cell-status.js';
@@ -277,7 +278,11 @@ describe('SheetPrimaryCell', () => {
       },
     };
 
-    function Harness({ onCommit }: { onCommit: (v: string) => void }) {
+    function Harness({
+      onCommit,
+    }: {
+      onCommit: (v: string) => CellCommitResult | Promise<CellCommitResult>;
+    }) {
       const cellStatus = useCellStatus();
       const refused = cellStatus.rejectedCellValue('7', 'name');
       return (
@@ -335,6 +340,26 @@ describe('SheetPrimaryCell', () => {
 
       expect(onCommit).toHaveBeenCalledWith('Renamed Seven');
       expect(screen.getByTestId('status').textContent).toBe('{}');
+    });
+
+    // A refusal the app reports back shows like a schema failure: on this
+    // cell, with the typed name kept so it can be fixed.
+    it('shows the error onCommit returns, keeping the typed name', async () => {
+      render(
+        <Harness onCommit={async () => ({ error: 'That name is taken' })} />,
+      );
+
+      open();
+      const input = screen.getByDisplayValue('Project Seven');
+      fireEvent.change(input, { target: { value: 'Taken' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('status').textContent).toContain(
+          'That name is taken',
+        ),
+      );
+      expect(screen.getByRole('button', { name: 'Taken' })).toBeTruthy();
     });
 
     it('keeps the refused value on screen and reopens the editor with it', () => {

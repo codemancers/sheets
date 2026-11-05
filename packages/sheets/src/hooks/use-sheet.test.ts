@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createColumnHelper, type SortingState } from '@tanstack/react-table';
+import { useCellStatus } from './use-cell-status.js';
 import { useSheet } from './use-sheet.js';
 
 type Row = { id: string; name: string };
@@ -94,6 +95,31 @@ describe('useSheet', () => {
       act(() => result.current.table.getColumn('name')?.toggleSorting(false));
 
       expect(names(result)).toEqual(['a', 'b']);
+    });
+  });
+
+  // Cells report validation and save failures through it, so every sheet
+  // needs one, not only those that save per row.
+  describe('cellStatus', () => {
+    it('provides its own when none is passed', () => {
+      const { result, rerender } = renderHook(() =>
+        useSheet({ columns, data }),
+      );
+      const first = result.current.cellStatus;
+
+      rerender();
+
+      expect(first.statuses).toEqual({});
+      expect(result.current.cellStatus).toBe(first);
+    });
+
+    it('uses the one it is given', () => {
+      const { result } = renderHook(() => {
+        const cellStatus = useCellStatus();
+        return { cellStatus, sheet: useSheet({ columns, data, cellStatus }) };
+      });
+
+      expect(result.current.sheet.cellStatus).toBe(result.current.cellStatus);
     });
   });
 });

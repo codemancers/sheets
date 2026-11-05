@@ -18,6 +18,8 @@ export type SheetLabels = {
   unsaved: string;
   saving: string;
   saved: string;
+  /** Shown on a cell when its `onCommit` throws, such as a failed request. */
+  saveFailed: string;
   /** Shown when there are no rows and no `emptyState`. */
   empty: string;
   /** Names the add-row button. */
@@ -33,6 +35,7 @@ export const defaultSheetLabels: SheetLabels = {
   unsaved: 'Unsaved',
   saving: 'Saving',
   saved: 'Saved',
+  saveFailed: 'Could not save. Check your connection.',
   empty: 'No data.',
   addRow: 'Add row',
 };

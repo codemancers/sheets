@@ -8,7 +8,7 @@ import {
   type RowData,
   type TableOptions,
 } from '@tanstack/react-table';
-import type { CellStatusState } from './use-cell-status.js';
+import { useCellStatus, type CellStatusState } from './use-cell-status.js';
 import type { RowChangesState } from './use-row-changes.js';
 
 /**
@@ -23,7 +23,8 @@ export type UseSheetOptions<TData extends RowData> = Omit<
     /**
      * The whole `useCellStatus()` state. Not just the map: cells validate
      * their own committed values against the column schema, so they need the
-     * setters.
+     * setters. The sheet creates its own when this is omitted; pass one when
+     * `useRowChanges` or your own handlers report to it.
      */
     cellStatus?: CellStatusState;
     /**
@@ -56,6 +57,9 @@ export function useSheet<TData extends RowData>({
   rowChanges,
   ...options
 }: UseSheetOptions<TData>) {
+  // Cells report validation and save failures through this, so every sheet
+  // has one, not only those that save per row.
+  const ownCellStatus = useCellStatus();
   const table = useReactTable<TData>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -69,7 +73,7 @@ export function useSheet<TData extends RowData>({
     ...(options.state ? { state: defined(options.state) } : {}),
   });
 
-  return { table, cellStatus, rowChanges };
+  return { table, cellStatus: cellStatus ?? ownCellStatus, rowChanges };
 }
 
 export type SheetInstance<TData extends RowData> = ReturnType<
