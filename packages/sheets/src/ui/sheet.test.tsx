@@ -366,6 +366,26 @@ describe('Sheet', () => {
     expect(screen.getByRole('button', { name: 'Add item' })).toBeTruthy();
   });
 
+  // Tests in apps can find the highlighted row without asserting on a class.
+  it('marks the highlighted row with data-highlighted', () => {
+    function Highlighted() {
+      const sheet = useSheet({
+        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        data: [
+          { id: 1, name: 'Alpha' },
+          { id: 2, name: 'Beta' },
+        ],
+        getRowId: (row) => String(row.id),
+      });
+      return <Sheet instance={sheet} highlightedRowId="2" />;
+    }
+    render(<Highlighted />);
+
+    const [, alpha, beta] = screen.getAllByRole('row');
+    expect(alpha.hasAttribute('data-highlighted')).toBe(false);
+    expect(beta.getAttribute('data-highlighted')).toBe('true');
+  });
+
   it('does not re-render the rows while a column is dragged', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<Task>();
