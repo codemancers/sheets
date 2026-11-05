@@ -1,7 +1,13 @@
 'use client';
 
 import { cx } from './cx.js';
-import { memo, useMemo, type CSSProperties, type ReactNode } from 'react';
+import {
+  memo,
+  useMemo,
+  useRef,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import type { Row, RowData } from '@tanstack/react-table';
 import type { SheetInstance } from '../hooks/use-sheet.js';
 import type { CellStatusState } from '../hooks/use-cell-status.js';
@@ -19,6 +25,17 @@ import {
 
 const ROW_NUMBER_WIDTH = 40;
 const DEFAULT_ROW_HEIGHT = 32;
+
+/** The same labels: the same keys, with the same value or function under each. */
+function sameLabels(a?: Partial<SheetLabels>, b?: Partial<SheetLabels>) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keys = Object.keys(a) as (keyof SheetLabels)[];
+  return (
+    keys.length === Object.keys(b).length &&
+    keys.every((key) => Object.is(a[key], b[key]))
+  );
+}
 
 export type SheetProps<TData extends RowData> = {
   instance: SheetInstance<TData>;
@@ -115,9 +132,23 @@ export function Sheet<TData extends RowData>({
   labels,
 }: SheetProps<TData>) {
   const { table, cellStatus, rowChanges } = instance;
-  const text = labels
-    ? { ...defaultSheetLabels, ...labels }
-    : defaultSheetLabels;
+  // Apps usually pass labels inline, a new object on every render. Keep the
+  // merged labels while their values are the same, or the context changes and
+  // everything that reads it re-renders, every row's number cell included,
+  // on each frame of a column drag.
+  const labelsRef = useRef<{
+    given?: Partial<SheetLabels>;
+    merged: SheetLabels;
+  }>(undefined);
+  if (!labelsRef.current || !sameLabels(labelsRef.current.given, labels)) {
+    labelsRef.current = {
+      given: labels,
+      merged: labels
+        ? { ...defaultSheetLabels, ...labels }
+        : defaultSheetLabels,
+    };
+  }
+  const text = labelsRef.current.merged;
 
   // Leaf columns, so grouped headers span their columns rather than add tracks.
   const leafColumns = table.getVisibleLeafColumns();
