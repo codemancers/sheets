@@ -20,6 +20,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 - [Sorting and filtering](#sorting-and-filtering)
 - [Editing and saving](#editing-and-saving)
 - [Layout and states](#layout-and-states)
+- [Adding rows](#adding-rows)
 - [Opening rows in a drawer](#opening-rows-in-a-drawer)
 - [Customising](#customising)
 - [Headless use](#headless-use)
@@ -166,6 +167,8 @@ Any state you don't control (column widths, visibility, order) is managed by the
 
 Editable cells validate a value, hand it on, and show the outcome on the cell itself rather than in a toast. A toast can't say _which_ cell it means.
 
+Cells report to the sheet's `cellStatus`. `useSheet` creates one if you don't pass it; pass your own `useCellStatus()` when `useRowChanges` or your own handlers report to it too.
+
 ### Saving per row (recommended)
 
 `useRowChanges` makes the row, not the cell, the unit you save. Cells hand it their committed values, and it calls your `onSubmitRow` with everything changed in that row:
@@ -247,22 +250,22 @@ function TaskSheet({ tasks }: { tasks: Task[] }) {
 
 ### Saving per cell
 
-Without `rowChanges`, each editable cell calls its own `onCommit`. You then perform the write and report the result yourself:
+Without `rowChanges`, each editable cell calls its own `onCommit`, where you perform the write. If it fails, return `{ error }`, or throw. The cell shows the error on itself and keeps the typed value, so the user can fix it and retry. While an async `onCommit` runs, the cell keeps showing the typed value:
 
 ```tsx
-const { cellStatus } = sheet; // the same useCellStatus() instance you passed in
-
-async function rename(rowId: string, title: string) {
-  try {
-    await saveTitle(rowId, title);
-    cellStatus?.setCellSaved(rowId, 'title');
-  } catch (error) {
-    cellStatus?.rejectCellValue(rowId, 'title', 'Could not save', title);
-  }
-}
+<SheetEditableTextCell
+  value={row.original.title}
+  onCommit={async (title) => {
+    const response = await fetch(`/api/tasks/${row.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    });
+    return response.ok ? undefined : { error: 'Could not save the title' };
+  }}
+/>
 ```
 
-Most apps should use `useRowChanges` with `flush: 'immediate'`, which does all of this for you.
+A thrown error shows the `saveFailed` label. For a tick on success, pass your own `useCellStatus()` to `useSheet` and call `cellStatus.setCellSaved(rowId, columnId)` in `onCommit`. Most apps should use `useRowChanges` with `flush: 'immediate'` instead, which shows saving and saved for you.
 
 ### Validation
 
@@ -301,10 +304,11 @@ function PriorityCell({ value }: { value: number }) {
 
 - `useSheetCellEditing(schema?)` gives you:
   - `stage`, `canStage`, `stagedValue` and `refusedValue`
+  - `submit(onCommit, value, failedMessage)`, which calls an app's `onCommit` and shows a returned `{ error }` on the cell, or `failedMessage` if it throws. `submittingValue` is the value while an async save runs.
   - `accepts`, which runs the schema and reports a failure on the cell
   - `abandon` and `clearOnEditStart`
   - `label`, the column's header, for naming your editor
-- `useInlineEdit` handles text-style editors: Enter, Escape, saving on blur, IME input, and returning focus to the cell.
+- `useInlineEdit` handles text-style editors: Enter, Escape, saving on blur, IME input, and returning focus to the cell. It calls `onCancel` on Escape, and when an edit ends with nothing to save.
 - Report outcomes through `cellStatus`, and `SheetCell` draws the icons.
 
 ## Layout and states
@@ -327,7 +331,7 @@ Column widths come from `size` (TanStack's default is 150px). After the last col
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders.        |
 | `emptyState`             | Content for a row that spans the columns when there's no data. Defaults to the `empty` label.                                             |
-| `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button.                                                                    |
+| `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button. See [Adding rows](#adding-rows).                                   |
 | `highlightedRowId`       | Highlights a row and scrolls it into view. Clear it after a moment to fade the highlight.                                                 |
 | `openRowId`              | Marks the row that is open in a drawer: highlighted, and announced as current. See [Opening rows in a drawer](#opening-rows-in-a-drawer). |
 | `rowHeight`, `className` | The minimum row height, and extra classes for the scroll container.                                                                       |
@@ -343,6 +347,62 @@ useEffect(() => {
 
 <Sheet instance={sheet} onAddRow={() => setHighlightedRowId(addTask().id)} highlightedRowId={highlightedRowId} />;
 ```
+
+## Adding rows
+
+`onAddRow` shows the add-row footer. To create a record from a new row in the sheet, add a temporary row to `data`, and give its first cell an editor:
+
+```tsx
+const NEW_ROW = 'new';
+const newRowPinned = { top: [], bottom: [NEW_ROW] };
+const noPinnedRows = { top: [], bottom: [] };
+
+function TaskSheet({ tasks }: { tasks: Task[] }) {
+  const [adding, setAdding] = useState(false);
+
+  const columns = useMemo(
+    () => [
+      task.accessor('title', {
+        header: 'Title',
+        cell: ({ row }) =>
+          row.id === NEW_ROW ? (
+            <SheetEditableTextCell
+              value=""
+              placeholder="New task"
+              autoFocus
+              onCommit={async (title) => {
+                const result = await createTask(title); // { error } if refused
+                if (!result.error) setAdding(false);
+                return result;
+              }}
+              onCancel={() => setAdding(false)}
+            />
+          ) : (
+            <SheetPrimaryCell>{row.original.title}</SheetPrimaryCell>
+          ),
+      }),
+    ],
+    [],
+  );
+
+  const sheet = useSheet({
+    columns,
+    data: adding ? [...tasks, { id: NEW_ROW, title: '' }] : tasks,
+    getRowId: (task) => task.id,
+    state: { rowPinning: adding ? newRowPinned : noPinnedRows },
+  });
+
+  return <Sheet instance={sheet} onAddRow={adding ? undefined : () => setAdding(true)} />;
+}
+```
+
+- **Saving:** `onCommit` creates the record. Return `{ error }`, or throw, and the error shows on the new row with the typed text kept for a retry. Returning the result, as above, rather than returning only on failure, also passes TypeScript's `noImplicitReturns`.
+- **Discarding:** `onCancel` runs on Escape, and when the editor closes with nothing typed (Enter, Tab or clicking away), so an empty new row goes away.
+- **Staying at the bottom:** `state.rowPinning` pins the new row with TanStack's row pinning, so a sort can't move it. Pin it only while it's in `data`, because TanStack throws for a pinned id it can't find. Keep the pinning objects constant, as above, so resizing a column doesn't re-render every row.
+- **A fixed id:** give the new row the same id every time, such as `'new'`. Its error and typed text are kept against that id.
+- **`value=""`:** a new record has no saved value. Don't copy the typed text into `value`: an unchanged retry would then look like nothing to save, and discard the row.
+
+The playground's "Adding rows" demo is a working version.
 
 ## Opening rows in a drawer
 
@@ -444,16 +504,17 @@ To follow your design system's CSS variables, such as shadcn's, use `@theme inli
 
 `<Sheet labels={…}>` replaces any of the text the sheet renders itself:
 
-| Label                        | Default                      | Used for                                     |
-| ---------------------------- | ---------------------------- | -------------------------------------------- |
-| `rowNumber`                  | `Row`                        | The name of the row-number column            |
-| `sort(column)`               | `Sort {column}`              | Header sort buttons                          |
-| `resize(column)`             | `Resize {column}`            | Resize handles                               |
-| `width(pixels)`              | `{pixels} pixels`            | A resize handle's current width, read out    |
-| `filtered`                   | `(filtered)`                 | Announced on a filtered column               |
-| `unsaved`, `saving`, `saved` | `Unsaved`, `Saving`, `Saved` | Cell statuses, announced                     |
-| `empty`                      | `No data.`                   | The empty state, when `emptyState` isn't set |
-| `addRow`                     | `Add row`                    | The add-row button                           |
+| Label                        | Default                                  | Used for                                     |
+| ---------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `rowNumber`                  | `Row`                                    | The name of the row-number column            |
+| `sort(column)`               | `Sort {column}`                          | Header sort buttons                          |
+| `resize(column)`             | `Resize {column}`                        | Resize handles                               |
+| `width(pixels)`              | `{pixels} pixels`                        | A resize handle's current width, read out    |
+| `filtered`                   | `(filtered)`                             | Announced on a filtered column               |
+| `unsaved`, `saving`, `saved` | `Unsaved`, `Saving`, `Saved`             | Cell statuses, announced                     |
+| `saveFailed`                 | `Could not save. Check your connection.` | A cell's error when its `onCommit` throws    |
+| `empty`                      | `No data.`                               | The empty state, when `emptyState` isn't set |
+| `addRow`                     | `Add row`                                | The add-row button                           |
 
 Cells and hooks take their own text props: `openLabel` and `detailLabel` on `SheetPrimaryCell`, `placeholder` on editable cells, and `transportErrorMessage` on `useRowChanges`.
 
@@ -531,16 +592,16 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 
 ### `@codemancers/sheets`
 
-| Export                                     | What it is                                                                                                                                                                                                                    |
-| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`.                                                                                                                              |
-| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                     |
-| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                             |
-| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`.                                                                                                              |
-| `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                  |
-| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                            |
-| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                             |
-| Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `SheetCellValidator`, `StandardSchemaV1`. |
+| Export                                     | What it is                                                                                                                                                                                                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own.                                                                                     |
+| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                                         |
+| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                                                 |
+| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                                     |
+| `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                                      |
+| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                                                |
+| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                                                 |
+| Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `CellCommitResult`, `SheetCellValidator`, `StandardSchemaV1`. |
 
 ### `@codemancers/sheets/ui`
 

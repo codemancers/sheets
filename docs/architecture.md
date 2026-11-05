@@ -35,14 +35,14 @@ return <Sheet instance={sheet} openRowId={drawer.openRowId} />;
 
 `useSheet` takes everything `useReactTable` takes, plus `cellStatus` and `rowChanges`. It returns `{ table, cellStatus, rowChanges }`, and `Sheet` renders from that.
 
-`useCellStatus` and `useRowChanges` are separate hooks, not part of `useSheet`, because the columns refer to them: a cell's handlers are written before the table that uses those columns exists.
+`useCellStatus` and `useRowChanges` are separate hooks, not part of `useSheet`, because the columns refer to them: a cell's handlers are written before the table that uses those columns exists. When the app passes no `cellStatus`, `useSheet` creates its own, so cells always have somewhere to report validation and save failures.
 
 ## Where state lives
 
 | State                                                                | Lives in                                                                                           | Why there                                                                 |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Sorting, filters, column sizes and the rest of the table state       | TanStack, inside `useSheet`, unless the app controls a piece of it through `state` and `on…Change` | Standard TanStack                                                         |
-| Each cell's status (unsaved, saving, saved, error) and refused value | `useCellStatus()`                                                                                  | Above the rows, because rows unmount when the data is sorted or refetched |
+| Each cell's status (unsaved, saving, saved, error) and refused value | `useCellStatus()`, the app's or `useSheet`'s own                                                   | Above the rows, because rows unmount when the data is sorted or refetched |
 | Staged values, debounce timers and the writes in flight              | `useRowChanges()`                                                                                  | The same reason. It also lets several fields go in one write.             |
 | The open row                                                         | `useRowDrawer()`, or the app when it passes `openRowId`                                            | The app renders its own drawer                                            |
 | The highlighted row                                                  | The app, through `<Sheet highlightedRowId>`                                                        | The app decides when to clear it                                          |
@@ -68,6 +68,7 @@ flowchart TD
 ```
 
 - **One grid for every row.** The root sets `--sheet-columns` to `40px`, then each visible leaf column's size in pixels, then `1fr`: the row-number column, the data columns, and a spacer that fills the rest. Header, body, empty, loading and add-row rows all lay out on `var(--sheet-columns)` (`src/ui/grid.ts`), so the columns line up without a `<table>`. A group header spans its leaf columns with `grid-column: span n`.
+- **Pinned rows.** The body renders TanStack's pinned top rows, then the rest, then the pinned bottom rows, so a pinned row stays put whatever the sort. Apps pin a new row being filled in to the bottom. TanStack memoises the three lists, so the combined one keeps its identity for `SheetBody`'s memo.
 - **Resizing re-renders little.** While a column is dragged, only the header and the root's variable change. `SheetBody` skips re-rendering while `columnSizingInfo.isResizingColumn` is set and its other props are unchanged. This is TanStack's advice for `columnResizeMode: 'onChange'`. It depends on `useCellStatus` and `useRowChanges` returning memoised objects.
 - **Cells.** `SheetCellContent` calls the column's `cell` function itself, without `flexRender`, so a column array that's rebuilt on every render doesn't remount the cells. A string or number result is wrapped in `SheetTextCell` for its padding. Headers do use `flexRender`.
 - **Headers.** The sort button calls TanStack's toggle handler, and shows on hover or keyboard focus. Leaf columns get a resize handle: a focusable separator that takes the mouse, touch, the arrow keys (10 px a step, 50 px with Shift, flipped for `columnResizeDirection: 'rtl'`), and a double-click to reset the width.
@@ -90,15 +91,16 @@ Outside a `Sheet`, for example in a test, there's no context. The hooks then do 
 2. **Closing:**
    - Enter or blur commits. Tab moves focus on, and the blur commits.
    - Escape cancels, dropping the cell's staged value, status and refused value.
+   - Enter or blur with nothing changed ends the edit the same way, and calls `onCancel` too. That's how an empty new row removes itself.
    - After Enter or Escape, focus returns to the cell.
    - While an IME is composing, Enter belongs to the IME.
 3. **Committing** happens when the draft differs from the value shown, or when the value shown isn't saved yet, which is how a refused value is retried:
    - A draft that matches the saved value has nothing to send. As with Escape, the cell drops its staged value, status and refused value.
    - The cell's `schema` runs. If it fails, the cell shows the first issue's message and keeps the value, and nothing is sent.
    - The value is then **staged** in the row buffer if the sheet has one (`useSheet({ rowChanges })`). `SheetPrimaryCell` always stages then, and `SheetEditableTextCell` only with its `stage` prop.
-   - Otherwise the cell calls its `onCommit`. The app performs the write, and reports the outcome through `cellStatus`.
+   - Otherwise the cell calls its `onCommit` through `submit`, and the app performs the write. If `onCommit` returns `{ error }`, or throws (shown as the `saveFailed` label), the cell reports it on itself and keeps the value as a refused value, ready for a retry. While an async `onCommit` runs, the cell shows the value being saved.
 
-**What a cell shows:** its staged value, otherwise its refused value, otherwise the value from the data. A refetch in the middle of an edit can't overwrite what was typed, and a refused value stays on screen next to its error. `SheetEditableTextCell` only shows a staged value when it has `stage`.
+**What a cell shows:** the value being saved through `onCommit`, otherwise its staged value, otherwise its refused value, otherwise the value from the data. A refetch in the middle of an edit can't overwrite what was typed, and a refused value stays on screen next to its error. `SheetEditableTextCell` only shows a staged value when it has `stage`.
 
 ## Saving a row
 
