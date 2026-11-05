@@ -55,6 +55,7 @@ When you make a choice that a future contributor would question, add it here.
 ## Rendering and performance
 
 - **Column widths live in one CSS variable.** The root sets `--sheet-columns`, and every row lays out on it. Resizing a column changes that one value, instead of a prop on every row.
+- **Labels are compared by value.** Apps pass `labels` inline, a new object on every render. `Sheet` keeps the merged labels while their values are the same, because a new context value would re-render every row's number cell on each frame of a drag.
 - **The body doesn't re-render while a column is dragged.** This is TanStack's advice for live resizing. It needs `useCellStatus` and `useRowChanges` to return memoised objects, so they do.
 - **New rows stay put through TanStack's row pinning,** not a new-row API. The body renders pinned top and bottom rows around the rest, and an app pins its new row to the bottom, so a sort can't move it. That keeps the plain TanStack API, and works for any row an app wants fixed.
 - **No virtualization yet.** Every row is rendered. The playground's 1,000-row demo shows how that performs. Virtualization is planned for a later release.

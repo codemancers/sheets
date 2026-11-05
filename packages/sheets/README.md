@@ -94,6 +94,7 @@ How the pieces fit together:
 - `useSheet` is TanStack's `useReactTable` with a sheet's defaults. It returns `{ table, cellStatus, rowChanges }`.
 - `<Sheet>` fills its parent and scrolls inside it, so give the parent a height.
 - `getRowId` sets each row's id. Always set it to your data's own id: editing state, highlighting and React keys all use the row id. TanStack's default is the row's position, which changes when rows are sorted or added.
+- Dark mode follows the operating system unless you add the one-line `@custom-variant dark` from [Install](#install).
 
 ## Columns and cells
 
@@ -144,6 +145,17 @@ const columns = [
 ## Sorting and filtering
 
 Sorting and filtering run in the browser by default. Any column with an accessor is sortable through its header button; turn that off with `enableSorting: false` on the column or on the table. To filter, use TanStack's column and global filter APIs (`column.setFilterValue`, `table.setGlobalFilter`) from your own controls.
+
+**Sort by what the cell shows.** A column sorts by its accessor's value, which isn't always what its cell displays:
+
+- If the value is an object, such as an assignee or a count object, TanStack can't order it. Set `enableSorting: false` on that column.
+- If the cell shows something derived, such as a project's name for a `projectId`, sort by that instead with an accessor function:
+
+  ```tsx
+  task.accessor((row) => row.project?.name ?? '', { id: 'project', header: 'Project' });
+  ```
+
+- For an order that isn't alphabetical, such as statuses in workflow order, give the column a `sortingFn`.
 
 **Server-side data.** Set TanStack's manual flags and control the state. The sheet then reports the sort, and your data layer applies it:
 
@@ -332,7 +344,7 @@ Column widths come from `size` (TanStack's default is 150px). After the last col
 | `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders.        |
 | `emptyState`             | Content for a row that spans the columns when there's no data. Defaults to the `empty` label.                                             |
 | `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button. See [Adding rows](#adding-rows).                                   |
-| `highlightedRowId`       | Highlights a row and scrolls it into view. Clear it after a moment to fade the highlight.                                                 |
+| `highlightedRowId`       | Highlights a row and scrolls it into view, and marks it `data-highlighted` for tests. Clear it after a moment to fade the highlight.      |
 | `openRowId`              | Marks the row that is open in a drawer: highlighted, and announced as current. See [Opening rows in a drawer](#opening-rows-in-a-drawer). |
 | `rowHeight`, `className` | The minimum row height, and extra classes for the scroll container.                                                                       |
 

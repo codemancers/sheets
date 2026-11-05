@@ -72,8 +72,8 @@ flowchart TD
 - **Resizing re-renders little.** While a column is dragged, only the header and the root's variable change. `SheetBody` skips re-rendering while `columnSizingInfo.isResizingColumn` is set and its other props are unchanged. This is TanStack's advice for `columnResizeMode: 'onChange'`. It depends on `useCellStatus` and `useRowChanges` returning memoised objects.
 - **Cells.** `SheetCellContent` calls the column's `cell` function itself, without `flexRender`, so a column array that's rebuilt on every render doesn't remount the cells. A string or number result is wrapped in `SheetTextCell` for its padding. Headers do use `flexRender`.
 - **Headers.** The sort button calls TanStack's toggle handler, and shows on hover or keyboard focus. Leaf columns get a resize handle: a focusable separator that takes the mouse, touch, the arrow keys (10 px a step, 50 px with Shift, flipped for `columnResizeDirection: 'rtl'`), and a double-click to reset the width.
-- **Text.** `Sheet` merges its `labels` prop over `defaultSheetLabels` and provides them through context. Components read them with `useSheetLabels()`.
-- **Roles.** The markup is `div`s with ARIA table roles: `table`, `rowgroup`, `row`, `columnheader`, `rowheader` for row numbers, and `cell`. The loading skeleton is hidden from assistive technology, and the body is marked `aria-busy` instead. The open row is `aria-current`.
+- **Text.** `Sheet` merges its `labels` prop over `defaultSheetLabels` and provides them through context, keeping the merged object while the values are the same. Components read them with `useSheetLabels()`.
+- **Roles.** The markup is `div`s with ARIA table roles: `table`, `rowgroup`, `row`, `columnheader`, `rowheader` for row numbers, and `cell`. The loading skeleton is hidden from assistive technology, and the body is marked `aria-busy` instead. The open row is `aria-current`, and the highlighted row has `data-highlighted`.
 
 ## The cell context
 
