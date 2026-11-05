@@ -227,7 +227,15 @@ function App() {
           <Demo
             id="adding-rows"
             title="Adding rows"
-            description="The footer adds a task, then highlights it and scrolls it into view."
+            description={
+              <>
+                The footer opens a new row at the bottom, where it stays even
+                when the list is sorted. Type a title and press Enter to create
+                the task, or leave it empty to discard it. Type{' '}
+                <code>taken</code> to have the create refused, or{' '}
+                <code>offline</code> for a network error.
+              </>
+            }
           >
             <AddRowDemo />
           </Demo>
