@@ -517,11 +517,11 @@ To follow your design system's CSS variables, such as shadcn's, use `@theme inli
 | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `sheet-bg`, `sheet-fg`                                                | Background and text. Borders and hover tints are `fg` at low opacity. |
 | `sheet-muted`, `sheet-faint`                                          | Secondary text, and placeholders                                      |
-| `sheet-raised`                                                        | The add-row footer on hover                                           |
+| `sheet-raised`                                                        | The add-row footer on hover, and the filter panel                     |
 | `sheet-skeleton`                                                      | Loading placeholders                                                  |
 | `sheet-tooltip`, `sheet-tooltip-fg`                                   | The error tooltip                                                     |
 | `sheet-link`, `sheet-link-hover`                                      | Links                                                                 |
-| `sheet-accent`                                                        | The column resize handle while it's dragged or focused                |
+| `sheet-accent`                                                        | The resize handle while it's dragged or focused, and an active filter |
 | `sheet-error`, `sheet-success`, `sheet-warning`                       | The refused, saved and unsaved status icons                           |
 | `sheet-highlight`                                                     | The highlighted row                                                   |
 
