@@ -144,9 +144,22 @@ const columns = [
 
 ## Sorting and filtering
 
-Sorting and filtering run in the browser by default. Any column with an accessor is sortable through its header button; turn that off with `enableSorting: false` on the column or on the table. To filter, use TanStack's column and global filter APIs (`column.setFilterValue`, `table.setGlobalFilter`) from your own controls.
+Sorting and filtering run in the browser by default. Any column with an accessor is sortable through its header button; turn that off with `enableSorting: false` on the column or on the table.
 
-**Sort by what the cell shows.** A column sorts by its accessor's value, which isn't always what its cell displays:
+**Filters.** Give a column one of the sheet's filter functions, and its header gets a filter button:
+
+```tsx
+import { textFilter, valuesFilter } from '@codemancers/sheets';
+
+const columns = [task.accessor('title', { header: 'Title', filterFn: textFilter }), task.accessor('status', { header: 'Status', filterFn: valuesFilter })];
+```
+
+- `textFilter` keeps the rows that contain the typed text, ignoring case.
+- `valuesFilter` lists the column's values, each with its number of rows, and keeps the rows whose value is checked. The counts take the other columns' filters into account.
+
+Columns without one of these have no filter button. When the filters leave no rows, the sheet says so, with a button that clears them. The state is TanStack's `columnFilters`: control it with `state.columnFilters` and `onColumnFiltersChange` to keep the filters in the URL, for example. For a search across every column, or controls of your own, use TanStack's APIs directly (`table.setGlobalFilter`, `column.setFilterValue`).
+
+**Sort by what the cell shows.** A column sorts and filters by its accessor's value, which isn't always what its cell displays:
 
 - If the value is an object, such as an assignee or a count object, TanStack can't order it. Set `enableSorting: false` on that column.
 - If the cell shows something derived, such as a project's name for a `projectId`, sort by that instead with an accessor function:
@@ -157,7 +170,7 @@ Sorting and filtering run in the browser by default. Any column with an accessor
 
 - For an order that isn't alphabetical, such as statuses in workflow order, give the column a `sortingFn`.
 
-**Server-side data.** Set TanStack's manual flags and control the state. The sheet then reports the sort, and your data layer applies it:
+**Server-side data.** Set TanStack's manual flags (`manualSorting`, `manualFiltering`) and control the state. The sheet then reports the sort and the filters, and your data layer applies them. With `manualFiltering`, a `valuesFilter` checklist lists only the values in the rows you've loaded.
 
 ```tsx
 const [sorting, setSorting] = useState<SortingState>([]);
@@ -516,17 +529,22 @@ To follow your design system's CSS variables, such as shadcn's, use `@theme inli
 
 `<Sheet labels={…}>` replaces any of the text the sheet renders itself:
 
-| Label                        | Default                                  | Used for                                     |
-| ---------------------------- | ---------------------------------------- | -------------------------------------------- |
-| `rowNumber`                  | `Row`                                    | The name of the row-number column            |
-| `sort(column)`               | `Sort {column}`                          | Header sort buttons                          |
-| `resize(column)`             | `Resize {column}`                        | Resize handles                               |
-| `width(pixels)`              | `{pixels} pixels`                        | A resize handle's current width, read out    |
-| `filtered`                   | `(filtered)`                             | Announced on a filtered column               |
-| `unsaved`, `saving`, `saved` | `Unsaved`, `Saving`, `Saved`             | Cell statuses, announced                     |
-| `saveFailed`                 | `Could not save. Check your connection.` | A cell's error when its `onCommit` throws    |
-| `empty`                      | `No data.`                               | The empty state, when `emptyState` isn't set |
-| `addRow`                     | `Add row`                                | The add-row button                           |
+| Label                        | Default                                       | Used for                                     |
+| ---------------------------- | --------------------------------------------- | -------------------------------------------- |
+| `rowNumber`                  | `Row`                                         | The name of the row-number column            |
+| `sort(column)`               | `Sort {column}`                               | Header sort buttons                          |
+| `resize(column)`             | `Resize {column}`                             | Resize handles                               |
+| `width(pixels)`              | `{pixels} pixels`                             | A resize handle's current width, read out    |
+| `filtered`                   | `(filtered)`                                  | Announced on a filtered column               |
+| `filter(column)`             | `Filter {column}`                             | Header filter buttons, and their filters     |
+| `filterText(column)`         | `{column} contains`                           | A text filter's input                        |
+| `blank`                      | `(Blank)`                                     | An empty value in a filter's checklist       |
+| `clearFilter`                | `Clear`                                       | Clears one column's filter                   |
+| `noMatches`, `clearFilters`  | `No rows match the filters.`, `Clear filters` | The state when the filters leave no rows     |
+| `unsaved`, `saving`, `saved` | `Unsaved`, `Saving`, `Saved`                  | Cell statuses, announced                     |
+| `saveFailed`                 | `Could not save. Check your connection.`      | A cell's error when its `onCommit` throws    |
+| `empty`                      | `No data.`                                    | The empty state, when `emptyState` isn't set |
+| `addRow`                     | `Add row`                                     | The add-row button                           |
 
 Cells and hooks take their own text props: `openLabel` and `detailLabel` on `SheetPrimaryCell`, `placeholder` on editable cells, and `transportErrorMessage` on `useRowChanges`.
 
@@ -578,7 +596,8 @@ const { table } = useSheet({ columns, data, getRowId: (task) => task.id });
 
 - **Table semantics:** the sheet is a table to assistive tech. Headers carry `aria-sort`, and the row-number column is named. Loading rows are marked busy, and the placeholder rows are hidden.
 - **Keyboard:**
-  - Tab reaches the sort buttons, resize handles, cells and row actions. Row actions appear on focus as well as hover.
+  - Tab reaches the sort and filter buttons, resize handles, cells and row actions. Row actions appear on focus as well as hover.
+  - A filter button opens its filter with focus inside it. Escape, or Enter in a text filter, closes it and returns focus to the button.
   - Enter or Space opens an editable cell. Enter saves, Escape cancels, and both return focus to the cell. Tab saves and moves on to the next cell.
   - On a focused resize handle, the arrow keys resize the column (Shift for bigger steps), and a double-click resets it.
 - **Screen readers:** editors are named after their column. Saving statuses are announced, and refused values are announced as alerts.
@@ -597,6 +616,7 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 - **No virtualisation yet.** Every row is rendered. Hundreds to a few thousand rows are fine; beyond that, render your own body with `@tanstack/react-virtual` through the headless API.
 - **No column pinning,** and no arrow-key navigation between cells.
 - **Text editors only.** The built-in editors are for text; other types need your own cells (see [Your own editable cells](#your-own-editable-cells)).
+- **Two filters:** text, and a checklist of values. A range, such as dates, needs your own control, through TanStack's filter APIs.
 - **TanStack Table v8 only.**
 - **The error tooltip** on the very last row of a completely full sheet can extend past the bottom edge, and the sheet scrolls to show it.
 
@@ -612,6 +632,7 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 | `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                                     |
 | `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                                      |
 | `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                                                |
+| `textFilter`, `valuesFilter`               | Filter functions for a column's `filterFn`: the text it contains, or one of a checklist of values. Either one gives the column's header a filter button.                                                                                          |
 | `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                                                 |
 | Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `CellCommitResult`, `SheetCellValidator`, `StandardSchemaV1`. |
 

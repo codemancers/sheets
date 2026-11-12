@@ -21,8 +21,10 @@ When you make a choice that a future contributor would question, add it here.
 - **Sheet defaults that any option overrides:**
   - Sorting and filtering run in the browser. TanStack skips them when `manualSorting` or `manualFiltering` is set, which is how an app sorts or filters on the server.
   - Columns resize live as they're dragged.
+  - TanStack's faceting is on, so a values filter can list a column's values and count them. It costs nothing until a filter asks.
 - **Options passed as `undefined` are dropped.** TanStack spreads the options over its defaults, so `onSortingChange: undefined` replaced TanStack's internal handler, and sorting and resizing silently did nothing.
 - **`autoResetPageIndex` is off.** There's no pagination UI, and resetting the page index on every data change loops forever when an app passes data that isn't memoised.
+- **A column opts into a header filter through its `filterFn`.** Setting `filterFn: textFilter` or `filterFn: valuesFilter` both filters the column and gives its header the matching control, so one property says what the filter does and what the user sees. Filters aren't on for every column, though TanStack allows that: its `'auto'` filter function is picked from the first row's value, which gives a column of objects or numbers a filter that doesn't work. A `ColumnMeta` flag was the other option, but it would need a matching `filterFn` set alongside it, in a second place to keep in step.
 - **Visual settings are `Sheet` props.** `rowHeight`, `highlightedRowId`, `openRowId` and `labels` only affect the rendering, so they aren't table state.
 - **Rows are identified by TanStack's `row.id`.** Statuses, staged values, and the highlighted and open rows all use it, so `getRowId` makes them follow a record through sorting and refetches.
 
@@ -58,6 +60,8 @@ When you make a choice that a future contributor would question, add it here.
 - **Labels are compared by value.** Apps pass `labels` inline, a new object on every render. `Sheet` keeps the merged labels while their values are the same, because a new context value would re-render every row's number cell on each frame of a drag.
 - **The body doesn't re-render while a column is dragged.** This is TanStack's advice for live resizing. It needs `useCellStatus` and `useRowChanges` to return memoised objects, so they do.
 - **New rows stay put through TanStack's row pinning,** not a new-row API. The body renders pinned top and bottom rows around the rest, and an app pins its new row to the bottom, so a sort can't move it. That keeps the plain TanStack API, and works for any row an app wants fixed.
+- **The filter panel is a native popover, placed with CSS anchor positioning.** The top layer keeps it from being clipped by the sheet's scroll container, and the browser closes it on a click outside and returns focus to its button, so there's no portal and no positioning code. Anchor positioning has been in every major browser since January 2026.
+- **Filter controls mount only while the panel is open.** A checklist counts its column's values when it mounts, so a sheet with many filterable columns doesn't count them all on every render. Mounting on open also lets `autoFocus` move focus into the panel, which content that's always mounted couldn't do.
 - **No virtualization yet.** Every row is rendered. The playground's 1,000-row demo shows how that performs. Virtualization is planned for a later release.
 - **No empty gridlines below the last row.** When the rows don't fill the sheet, the space below them stays blank, since empty cells would look like rows that exist.
 
