@@ -115,6 +115,28 @@ describe('SheetColumnFilter', () => {
     expect(screen.getByRole('checkbox', { name: 'Done 1' })).toBeTruthy();
   });
 
+  it('lists the values the app supplies, such as counts from a server', () => {
+    const counts = new Map([
+      ['Todo', 12],
+      ['Done', 30],
+    ]);
+    function ServerTasks() {
+      const sheet = useSheet({
+        columns,
+        data: tasks,
+        getRowId: (row) => row.id,
+        manualFiltering: true,
+        getFacetedUniqueValues: () => () => counts,
+      });
+      return <Sheet instance={sheet} />;
+    }
+    render(<ServerTasks />);
+    openFilter('Filter Status');
+
+    expect(screen.getByRole('checkbox', { name: 'Done 30' })).toBeTruthy();
+    expect(screen.getByRole('checkbox', { name: 'Todo 12' })).toBeTruthy();
+  });
+
   it('clears its column and closes', () => {
     render(<Tasks />);
     openFilter('Filter Status');

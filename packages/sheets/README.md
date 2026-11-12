@@ -170,7 +170,7 @@ Columns without one of these have no filter button. When the filters leave no ro
 
 - For an order that isn't alphabetical, such as statuses in workflow order, give the column a `sortingFn`.
 
-**Server-side data.** Set TanStack's manual flags (`manualSorting`, `manualFiltering`) and control the state. The sheet then reports the sort and the filters, and your data layer applies them. With `manualFiltering`, a `valuesFilter` checklist lists only the values in the rows you've loaded.
+**Server-side data.** Set TanStack's manual flags (`manualSorting`, `manualFiltering`) and control the state. The sheet then reports the sort and the filters, and your data layer applies them. With `manualFiltering`, a `valuesFilter` checklist lists the values in the rows you've loaded. To list every value from your server, with its count, pass TanStack's `getFacetedUniqueValues` option as `(table, columnId) => () => counts` (see TanStack's [server-side faceting](https://tanstack.com/table/v8/docs/guide/column-faceting#custom-server-side-faceting)). TanStack calls the outer function once per column and keeps the inner one, so have the inner one read your latest counts, from a ref for example, rather than capture them.
 
 ```tsx
 const [sorting, setSorting] = useState<SortingState>([]);
