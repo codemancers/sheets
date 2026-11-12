@@ -9,6 +9,7 @@ import {
 import { cx } from './cx.js';
 import { flexRender, type Header } from '@tanstack/react-table';
 import { useSheetLabels } from './labels.js';
+import { columnFilterKind, SheetColumnFilter } from './sheet-column-filter.js';
 
 /** Pixels per arrow key on the resize handle; Shift moves five steps. */
 const RESIZE_STEP = 10;
@@ -48,6 +49,7 @@ export function SheetColumn<TData>({
 
   const sort = column.getIsSorted();
   const canSort = column.getCanSort();
+  const filterKind = columnFilterKind(column);
   const size = header.getSize();
   const minSize = column.columnDef.minSize ?? 0;
 
@@ -84,20 +86,32 @@ export function SheetColumn<TData>({
         {sort === 'desc' && <ChevronDownIcon className="size-3" />}
         {column.getIsFiltered() && (
           <>
-            <FunnelIcon className="size-3" />
+            {/* A column with a filter control shows this on its button. */}
+            {!filterKind && <FunnelIcon className="size-3" />}
             <span className="sr-only">{labels.filtered}</span>
           </>
         )}
       </div>
-      {canSort && (
-        <button
-          type="button"
-          onClick={column.getToggleSortingHandler()}
-          className="text-sheet-fg/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-sheet-fg focus-visible:opacity-100 dark:text-sheet-fg-dark/30 dark:hover:text-sheet-fg-dark"
-          aria-label={labels.sort(label)}
-        >
-          <ArrowsUpDownIcon className="size-3" />
-        </button>
+      {(canSort || filterKind) && (
+        <div className="flex shrink-0 items-center gap-1">
+          {canSort && (
+            <button
+              type="button"
+              onClick={column.getToggleSortingHandler()}
+              className="text-sheet-fg/30 opacity-0 transition-opacity group-hover:opacity-100 hover:text-sheet-fg focus-visible:opacity-100 dark:text-sheet-fg-dark/30 dark:hover:text-sheet-fg-dark"
+              aria-label={labels.sort(label)}
+            >
+              <ArrowsUpDownIcon className="size-3" />
+            </button>
+          )}
+          {filterKind && (
+            <SheetColumnFilter
+              column={column}
+              kind={filterKind}
+              label={label}
+            />
+          )}
+        </div>
       )}
       {isLeaf && column.getCanResize() && (
         <div

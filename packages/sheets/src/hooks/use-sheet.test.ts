@@ -45,6 +45,21 @@ describe('useSheet', () => {
     expect(result.current.table.getColumn('name')?.getSize()).toBe(240);
   });
 
+  it("counts a column's values, for its filter", () => {
+    const { result } = renderHook(() =>
+      useSheet({ columns, data: [...data, { id: '3', name: 'a' }] }),
+    );
+
+    expect(
+      result.current.table.getColumn('name')?.getFacetedUniqueValues(),
+    ).toEqual(
+      new Map([
+        ['b', 1],
+        ['a', 2],
+      ]),
+    );
+  });
+
   describe('controlled state', () => {
     it('leaves the state to the app and reports the change', () => {
       const onSortingChange = vi.fn();

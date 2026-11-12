@@ -195,7 +195,24 @@ export function Sheet<TData extends RowData>({
               />
             ))
           ) : rows.length === 0 ? (
-            <SheetEmpty>{emptyState}</SheetEmpty>
+            <SheetEmpty>
+              {/* `emptyState` means there's no data. Here there is, but the
+                  filters hide all of it. */}
+              {table.getState().columnFilters.length > 0 ? (
+                <>
+                  {text.noMatches}{' '}
+                  <button
+                    type="button"
+                    onClick={() => table.setColumnFilters([])}
+                    className="text-sheet-link hover:text-sheet-link-hover dark:text-sheet-link-dark dark:hover:text-sheet-link-hover-dark"
+                  >
+                    {text.clearFilters}
+                  </button>
+                </>
+              ) : (
+                emptyState
+              )}
+            </SheetEmpty>
           ) : (
             <SheetBody
               rows={rows}

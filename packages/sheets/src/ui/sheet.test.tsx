@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createColumnHelper } from '@tanstack/react-table';
+import { textFilter } from '../hooks/filters.js';
 import { useSheet } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 import { SheetEditableTextCell } from './cells/editable-text-cell.js';
@@ -367,6 +368,27 @@ describe('Sheet', () => {
   });
 
   // Tests in apps can find the highlighted row without asserting on a class.
+  it('says when the filters hide every row, and clears them', () => {
+    function Filtered() {
+      const sheet = useSheet({
+        columns: [
+          rowColumn.accessor('name', { header: 'Name', filterFn: textFilter }),
+        ],
+        data: [{ id: 1, name: 'Alpha' }],
+        getRowId: (row) => String(row.id),
+        initialState: { columnFilters: [{ id: 'name', value: 'zzz' }] },
+      });
+      return <Sheet instance={sheet} emptyState="No rows yet." />;
+    }
+    render(<Filtered />);
+
+    expect(screen.queryByText('No rows yet.')).toBeNull();
+    expect(screen.getByText(/No rows match the filters\./)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+
+    expect(screen.getByText('Alpha')).toBeTruthy();
+  });
+
   it('marks the highlighted row with data-highlighted', () => {
     function Highlighted() {
       const sheet = useSheet({

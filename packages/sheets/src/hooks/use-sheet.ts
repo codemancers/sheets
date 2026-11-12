@@ -2,6 +2,8 @@
 
 import {
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
   getSortedRowModel,
   useReactTable,
@@ -49,8 +51,8 @@ function defined<T extends object>(values: T): T {
 /**
  * `useReactTable` with a sheet's defaults: sorting and filtering in the
  * browser (TanStack skips them when `manualSorting` / `manualFiltering` is
- * set, for server-side data) and live column resizing. Any option the app
- * passes wins.
+ * set, for server-side data), each column's values and counts for its filter,
+ * and live column resizing. Any option the app passes wins.
  */
 export function useSheet<TData extends RowData>({
   cellStatus,
@@ -64,6 +66,9 @@ export function useSheet<TData extends RowData>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    // Counted per column only when asked for: when a values filter opens.
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
     // There is no pagination UI, and resetting the page index on every data
