@@ -306,6 +306,152 @@ test('sorts 1,000 rows in the browser', async ({ page }) => {
   ).toHaveText('Accessibility pass');
 });
 
+test.describe('filtering', () => {
+  const region = '1,000 rows';
+  // Two header rows (the groups, then the columns), then the data rows.
+  const rows = (page: Page) => demo(page, region).getByRole('row');
+  const filterButton = (page: Page, column: string) =>
+    demo(page, region).getByRole('button', { name: `Filter ${column}` });
+  const panel = (page: Page, column: string) =>
+    page.getByRole('dialog', { name: `Filter ${column}` });
+
+  test('filters by text, ignoring case, then clears', async ({ page }) => {
+    await filterButton(page, 'Title').click();
+    const input = page.getByRole('textbox', { name: 'Title contains' });
+    await expect(input).toBeFocused();
+
+    // "Review the README" and its 99 numbered copies.
+    await input.fill('readme');
+    await expect(rows(page)).toHaveCount(102);
+
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await expect(rows(page)).toHaveCount(1002);
+    await expect(filterButton(page, 'Title')).toBeFocused();
+  });
+
+  test('picks statuses, with their counts', async ({ page }) => {
+    await filterButton(page, 'Status').click();
+    const statuses = panel(page, 'Status');
+
+    await statuses.getByRole('checkbox', { name: 'Blocked 250' }).check();
+    await expect(rows(page)).toHaveCount(252);
+    await statuses.getByRole('checkbox', { name: 'Done 250' }).check();
+    await expect(rows(page)).toHaveCount(502);
+
+    // Unpicking everything removes the filter instead of hiding every row.
+    await statuses.getByRole('checkbox', { name: 'Blocked' }).uncheck();
+    await statuses.getByRole('checkbox', { name: 'Done' }).uncheck();
+    await expect(rows(page)).toHaveCount(1002);
+  });
+
+  test('combines filters, and keeps them while sorting', async ({ page }) => {
+    await filterButton(page, 'Status').click();
+    await panel(page, 'Status').getByRole('checkbox', { name: 'Todo' }).check();
+    await page.keyboard.press('Escape');
+
+    // Counted within the Status filter: Ada has 50 of the 250 Todo tasks.
+    await filterButton(page, 'Owner').click();
+    await panel(page, 'Owner')
+      .getByRole('checkbox', { name: 'Ada 50' })
+      .check();
+    await page.keyboard.press('Escape');
+    await expect(rows(page)).toHaveCount(52);
+
+    await demo(page, region)
+      .getByRole('button', { name: 'Sort Title' })
+      .click();
+    await expect(rows(page)).toHaveCount(52);
+    await expect(rows(page).nth(2).getByRole('cell').first()).toHaveText(
+      'Draft the launch post',
+    );
+  });
+
+  test('works from the keyboard', async ({ page }) => {
+    const button = filterButton(page, 'Status');
+    await button.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('checkbox', { name: 'Blocked' })).toBeFocused();
+
+    await page.keyboard.press('Space');
+    await expect(rows(page)).toHaveCount(252);
+
+    await page.keyboard.press('Escape');
+    await expect(panel(page, 'Status')).toBeHidden();
+    await expect(button).toBeFocused();
+  });
+
+  test('says when nothing matches, and clears every filter', async ({
+    page,
+  }) => {
+    await filterButton(page, 'Title').click();
+    await page
+      .getByRole('textbox', { name: 'Title contains' })
+      .fill('no such task');
+    // Enter closes the filter, and focus goes back to its button.
+    await page.keyboard.press('Enter');
+    await expect(panel(page, 'Title')).toBeHidden();
+    await expect(filterButton(page, 'Title')).toBeFocused();
+
+    const sheet = demo(page, region);
+    await expect(sheet.getByText('No rows match the filters.')).toBeVisible();
+    await sheet.getByRole('button', { name: 'Clear filters' }).click();
+    await expect(rows(page)).toHaveCount(1002);
+  });
+
+  test('Escape closes a filter and stays full screen', async ({ page }) => {
+    await page.goto('/?full=large');
+    await filterButton(page, 'Owner').click();
+    await expect(page.getByRole('checkbox', { name: 'Ada' })).toBeFocused();
+
+    await page.keyboard.press('Escape');
+
+    await expect(panel(page, 'Owner')).toBeHidden();
+    await expect(
+      demo(page, region).getByRole('button', { name: 'Exit full screen' }),
+    ).toBeVisible();
+  });
+
+  test('opens under its button, mirrored right to left', async ({ page }) => {
+    const button = filterButton(page, 'Status');
+    const edges = async () => {
+      await button.click();
+      const [b, p] = await Promise.all([
+        button.boundingBox(),
+        panel(page, 'Status').boundingBox(),
+      ]);
+      await page.keyboard.press('Escape');
+      if (!b || !p) throw new Error('Nothing to measure');
+      expect(p.y).toBeGreaterThan(b.y);
+      return { button: b, panel: p };
+    };
+
+    // Lined up with the button's trailing edge: the right, then the left.
+    const ltr = await edges();
+    expect(
+      Math.abs(
+        ltr.panel.x + ltr.panel.width - (ltr.button.x + ltr.button.width),
+      ),
+    ).toBeLessThanOrEqual(1);
+    await page.getByRole('button', { name: 'Right to left' }).click();
+    const rtl = await edges();
+    expect(Math.abs(rtl.panel.x - rtl.button.x)).toBeLessThanOrEqual(1);
+  });
+
+  test('accessibility scan with a filter open', async ({ page }) => {
+    await filterButton(page, 'Status').click();
+    await expect(panel(page, 'Status')).toBeVisible();
+
+    // The header row holds the filter buttons and the open panel.
+    const { violations } = await new AxeBuilder({ page })
+      .include(
+        'section[aria-labelledby="large"] [role="table"] > [role="rowgroup"]:first-child',
+      )
+      .analyze();
+
+    expect(violations.map((v) => v.id)).toEqual([]);
+  });
+});
+
 test('mirrors for right-to-left layouts', async ({ page }) => {
   await page.getByRole('button', { name: 'Right to left' }).click();
   const region = demo(page, 'Sorting and row actions');
