@@ -1,7 +1,9 @@
 name: Release
 
 # Publishes @codemancers/sheets to npm when a GitHub release is published.
-# npm trusts this workflow (trusted publishing), so there's no npm token.
+# npm trusts this workflow (trusted publishing), so there's no npm token. The
+# trusted publisher on npmjs.com must allow `npm publish`: npm sets new ones to
+# allow only `npm stage publish`, and `npm publish` then fails with E403.
 on:
   release:
     types: [published]
