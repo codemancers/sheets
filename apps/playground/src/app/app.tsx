@@ -249,7 +249,7 @@ function App() {
           <Demo
             id="large"
             title="1,000 rows"
-            description="Sorted in the browser, the default. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
+            description="Sorted and filtered in the browser, the default: filter Title by its text, and Status and Owner by their values. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
           >
             <LargeDemo />
           </Demo>

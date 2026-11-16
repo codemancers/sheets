@@ -56,10 +56,10 @@ Statuses, staged values and the open and highlighted rows are all keyed by TanSt
 flowchart TD
   Sheet["Sheet (role=table)<br/>sets --sheet-columns and provides the labels"]
   Sheet --> Header["SheetHeader<br/>a row per header group"]
-  Header --> Column["SheetColumn per header<br/>flexRender, sort button, resize handle"]
+  Header --> Column["SheetColumn per header<br/>flexRender, sort button, filter, resize handle"]
   Sheet --> Body["Body rowgroup"]
   Body -->|isLoading| Loading["loadingState, or SheetLoading"]
-  Body -->|no rows| Empty["SheetEmpty"]
+  Body -->|no rows| Empty["SheetEmpty<br/>or, when filters hide every row, a way to clear them"]
   Body -->|rows| Rows["SheetBody, memoised"]
   Rows --> Row["SheetRow per row"]
   Row --> Cell["SheetCell per visible cell<br/>provides the cell context and draws the status"]
@@ -72,6 +72,7 @@ flowchart TD
 - **Resizing re-renders little.** While a column is dragged, only the header and the root's variable change. `SheetBody` skips re-rendering while `columnSizingInfo.isResizingColumn` is set and its other props are unchanged. This is TanStack's advice for `columnResizeMode: 'onChange'`. It depends on `useCellStatus` and `useRowChanges` returning memoised objects.
 - **Cells.** `SheetCellContent` calls the column's `cell` function itself, without `flexRender`, so a column array that's rebuilt on every render doesn't remount the cells. A string or number result is wrapped in `SheetTextCell` for its padding. Headers do use `flexRender`.
 - **Headers.** The sort button calls TanStack's toggle handler, and shows on hover or keyboard focus. Leaf columns get a resize handle: a focusable separator that takes the mouse, touch, the arrow keys (10 px a step, 50 px with Shift, flipped for `columnResizeDirection: 'rtl'`), and a double-click to reset the width.
+- **Filters.** A column whose `filterFn` is `textFilter` or `valuesFilter` gets a filter button (`SheetColumnFilter`). It opens a native popover, which sits in the top layer above the scroll container, placed under the button with CSS anchor positioning. The controls mount only while it's open: a text input, or a checklist built from TanStack's faceted values (`getFacetedUniqueValues`, which counts each value with the other columns' filters applied). Both write to TanStack's `columnFilters` through `column.setFilterValue`, and TanStack's filtered row model does the rest. The body shows "no matches" and a clear button when the column filters leave no rows.
 - **Text.** `Sheet` merges its `labels` prop over `defaultSheetLabels` and provides them through context, keeping the merged object while the values are the same. Components read them with `useSheetLabels()`.
 - **Roles.** The markup is `div`s with ARIA table roles: `table`, `rowgroup`, `row`, `columnheader`, `rowheader` for row numbers, and `cell`. The loading skeleton is hidden from assistive technology, and the body is marked `aria-busy` instead. The open row is `aria-current`, and the highlighted row has `data-highlighted`.
 

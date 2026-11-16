@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useSheet } from '@codemancers/sheets';
+import { textFilter, useSheet, valuesFilter } from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
 import { RtlContext } from '../direction';
 import { makeTasks, type Task } from '../data';
@@ -14,15 +14,19 @@ const columns = [
     id: 'task',
     header: 'Task',
     columns: [
-      task.accessor('title', { header: 'Title', size: 300 }),
-      task.accessor('status', { header: 'Status' }),
+      task.accessor('title', {
+        header: 'Title',
+        size: 300,
+        filterFn: textFilter,
+      }),
+      task.accessor('status', { header: 'Status', filterFn: valuesFilter }),
     ],
   }),
   task.group({
     id: 'assignment',
     header: 'Assignment',
     columns: [
-      task.accessor('owner', { header: 'Owner' }),
+      task.accessor('owner', { header: 'Owner', filterFn: valuesFilter }),
       task.accessor('due', {
         header: () => <abbr title="Due date">Due</abbr>,
         size: 120,
@@ -31,7 +35,7 @@ const columns = [
   }),
 ];
 
-/** Sorted in the browser, the default. No virtualization yet. */
+/** Sorted and filtered in the browser, the default. No virtualization yet. */
 export function LargeDemo() {
   const rtl = useContext(RtlContext);
   const sheet = useSheet({

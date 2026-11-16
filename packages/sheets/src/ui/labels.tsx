@@ -14,6 +14,18 @@ export type SheetLabels = {
   width: (pixels: number) => string;
   /** Announced on a filtered column's header. */
   filtered: string;
+  /** Names a header's filter button, and the filter it opens. */
+  filter: (column: string) => string;
+  /** Names a text filter's input, and is its placeholder. */
+  filterText: (column: string) => string;
+  /** Stands for an empty value in a filter's checklist. */
+  blank: string;
+  /** Clears one column's filter. */
+  clearFilter: string;
+  /** Shown when the filters leave no rows. */
+  noMatches: string;
+  /** Clears every column's filter. */
+  clearFilters: string;
   /** Cell status, announced to assistive tech. */
   unsaved: string;
   saving: string;
@@ -32,6 +44,12 @@ export const defaultSheetLabels: SheetLabels = {
   resize: (column) => `Resize ${column}`,
   width: (pixels) => `${pixels} pixels`,
   filtered: '(filtered)',
+  filter: (column) => `Filter ${column}`,
+  filterText: (column) => `${column} contains`,
+  blank: '(Blank)',
+  clearFilter: 'Clear',
+  noMatches: 'No rows match the filters.',
+  clearFilters: 'Clear filters',
   unsaved: 'Unsaved',
   saving: 'Saving',
   saved: 'Saved',
