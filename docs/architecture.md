@@ -88,7 +88,7 @@ Outside a `Sheet`, for example in a test, there's no context. The hooks then do 
 
 `useInlineEdit` runs the editor, and `useSheetCellEditing` connects it to the sheet. Both editable cells, `SheetEditableTextCell` and `SheetPrimaryCell` with `editable`, work like this:
 
-1. **Opening.** Clicking the cell clears its status icon, which would cover the text, but keeps any refused value so a typo can be fixed. The input takes focus as it mounts.
+1. **Opening.** A click, F2 or a typed character opens the editor. A typed character replaces the value, as in a spreadsheet; the others keep any refused value so a typo can be fixed. Opening clears the cell's status icon, which would cover the text. The input takes focus as it mounts, with the caret after the text.
 2. **Closing:**
    - Enter or blur commits. Tab moves focus on, and the blur commits.
    - Escape cancels, dropping the cell's staged value, status and refused value.
