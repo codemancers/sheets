@@ -113,6 +113,59 @@ describe('SheetEditableTextCell', () => {
 
   // The rule lives with the column and this cell executes it, same contract as
   // SheetPrimaryCell. Reporting needs a Sheet, so the scope is provided here.
+  // Data entry, as in a spreadsheet: a focused cell opens on the key typed.
+  describe('typing into the cell', () => {
+    const cell = () => screen.getByRole('button', { name: 'Project One' });
+    const editor = () => screen.queryByRole<HTMLInputElement>('textbox');
+
+    it('opens on a typed character, which replaces the value', () => {
+      const { onCommit } = renderCell({ autoFocus: false });
+
+      fireEvent.keyDown(cell(), { key: 'R' });
+
+      expect(editor()?.value).toBe('R');
+      expect(document.activeElement).toBe(editor());
+      fireEvent.keyDown(editor() as HTMLInputElement, { key: 'Enter' });
+      expect(onCommit).toHaveBeenCalledWith('R');
+    });
+
+    it('keeps the value on F2', () => {
+      renderCell({ autoFocus: false });
+
+      fireEvent.keyDown(cell(), { key: 'F2' });
+
+      expect(editor()?.value).toBe('Project One');
+    });
+
+    // Space presses the button, which opens the editor with the value kept.
+    it('does not take Space as a typed character', () => {
+      renderCell({ autoFocus: false });
+
+      fireEvent.keyDown(cell(), { key: ' ' });
+
+      expect(editor()).toBeNull();
+    });
+
+    it('leaves shortcuts alone, but types AltGr characters', () => {
+      renderCell({ autoFocus: false });
+
+      fireEvent.keyDown(cell(), { key: 'c', ctrlKey: true });
+      fireEvent.keyDown(cell(), { key: 'v', metaKey: true });
+      expect(editor()).toBeNull();
+
+      fireEvent.keyDown(cell(), { key: '@', ctrlKey: true, altKey: true });
+      expect(editor()?.value).toBe('@');
+    });
+
+    it('leaves the key to an input method that is composing', () => {
+      renderCell({ autoFocus: false });
+
+      fireEvent.keyDown(cell(), { key: 'a', isComposing: true });
+
+      expect(editor()).toBeNull();
+    });
+  });
+
   describe('schema', () => {
     const required = {
       '~standard': {

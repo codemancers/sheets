@@ -45,7 +45,7 @@ export type SheetProps<TData extends RowData> = {
   isLoading?: boolean;
   loadingState?: ReactNode;
   emptyState?: ReactNode;
-  /** Shows the add-row footer, whose button calls this. */
+  /** Shows the add-row button, right below the rows, which calls this. */
   onAddRow?: () => void;
   addRowDisabled?: boolean;
   /**
@@ -185,7 +185,7 @@ export function Sheet<TData extends RowData>({
         <div
           role="rowgroup"
           aria-busy={isLoading || undefined}
-          className="flex flex-1 flex-col"
+          className="flex flex-col"
         >
           {isLoading ? (
             (loadingState ?? (
