@@ -1,6 +1,7 @@
 'use client';
 
-import type { CellContext, Row } from '@tanstack/react-table';
+import type { CellContext, Row, RowData } from '@tanstack/react-table';
+import type { SheetFeatures } from '../hooks/use-sheet.js';
 import { cx } from './cx.js';
 import { useEffect, useRef } from 'react';
 import { SheetCell } from './sheet-cell.js';
@@ -14,8 +15,8 @@ import {
 } from '../hooks/use-cell-status.js';
 import type { RowChangesState } from '../hooks/use-row-changes.js';
 
-export type SheetRowProps<TData> = {
-  row: Row<TData>;
+export type SheetRowProps<TData extends RowData> = {
+  row: Row<SheetFeatures, TData>;
   rowIndex: number;
   rowHeight: number;
   highlight?: boolean;
@@ -31,10 +32,10 @@ export type SheetRowProps<TData> = {
  * type, so columns rebuilt on a render (an inline array, or a memo whose deps
  * changed) remounted every cell and closed any open editor.
  */
-function SheetCellContent<TData>({
+function SheetCellContent<TData extends RowData>({
   context,
 }: {
-  context: CellContext<TData, unknown>;
+  context: CellContext<SheetFeatures, TData, unknown>;
 }) {
   const render = context.column.columnDef.cell;
   const content = typeof render === 'function' ? render(context) : render;
@@ -47,7 +48,7 @@ function SheetCellContent<TData>({
   );
 }
 
-export function SheetRow<TData>({
+export function SheetRow<TData extends RowData>({
   row,
   rowIndex,
   rowHeight,

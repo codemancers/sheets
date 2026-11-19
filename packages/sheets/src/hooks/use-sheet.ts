@@ -1,12 +1,32 @@
 'use client';
 
 import {
-  getCoreRowModel,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
+  columnFacetingFeature,
+  columnFilteringFeature,
+  columnOrderingFeature,
+  columnResizingFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
+  createFacetedRowModel,
+  createFacetedUniqueValues,
+  createFilteredRowModel,
+  createSortedRowModel,
+  filterFn_arrIncludes,
+  filterFn_equals,
+  filterFn_inDateRange,
+  filterFn_inNumberRange,
+  filterFn_includesString,
+  filterFn_weakEquals,
+  globalFilteringFeature,
+  rowPinningFeature,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
+  type ColumnDef,
   type RowData,
   type TableOptions,
 } from '@tanstack/react-table';
@@ -14,28 +34,73 @@ import { useCellStatus, type CellStatusState } from './use-cell-status.js';
 import type { RowChangesState } from './use-row-changes.js';
 
 /**
- * Everything `useReactTable` takes — columns are plain TanStack `ColumnDef`s
- * — plus the sheet's editing state. `getCoreRowModel` is supplied.
+ * The TanStack features a sheet is built on, and the sort and filter
+ * functions TanStack picks from when a column names none. Every sheet uses
+ * this one set: TanStack v9 types a table by its feature set, so components
+ * typed for this set can't take a table with another.
+ */
+const sheetFeatures = tableFeatures({
+  columnFilteringFeature,
+  columnFacetingFeature,
+  globalFilteringFeature,
+  columnOrderingFeature,
+  columnVisibilityFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+  rowPinningFeature,
+  rowSortingFeature,
+  filteredRowModel: createFilteredRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  // Counted per column only when asked for: when a values filter opens.
+  facetedRowModel: createFacetedRowModel(),
+  facetedUniqueValues: createFacetedUniqueValues(),
+  filterFns: {
+    arrIncludes: filterFn_arrIncludes,
+    equals: filterFn_equals,
+    inDateRange: filterFn_inDateRange,
+    inNumberRange: filterFn_inNumberRange,
+    includesString: filterFn_includesString,
+    weakEquals: filterFn_weakEquals,
+  },
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+});
+
+export type SheetFeatures = typeof sheetFeatures;
+
+/** A TanStack `ColumnDef` for a sheet with the default features. */
+export type SheetColumnDef<TData extends RowData, TValue = unknown> = ColumnDef<
+  SheetFeatures,
+  TData,
+  TValue
+>;
+
+/**
+ * Everything `useTable` takes except `features`, which is the sheet's own —
+ * columns are plain TanStack `ColumnDef`s — plus the sheet's editing state.
  */
 export type UseSheetOptions<TData extends RowData> = Omit<
-  TableOptions<TData>,
-  'getCoreRowModel'
-> &
-  Partial<Pick<TableOptions<TData>, 'getCoreRowModel'>> & {
-    /**
-     * The whole `useCellStatus()` state. Not just the map: cells validate
-     * their own committed values against the column schema, so they need the
-     * setters. The sheet creates its own when this is omitted; pass one when
-     * `useRowChanges` or your own handlers report to it.
-     */
-    cellStatus?: CellStatusState;
-    /**
-     * From `useRowChanges()`. Pass it to submit per row instead of per cell —
-     * editable cells then stage their committed values here. Omit to keep each
-     * cell performing its own write through its `onCommit`.
-     */
-    rowChanges?: RowChangesState;
-  };
+  TableOptions<SheetFeatures, TData>,
+  'features'
+> & {
+  /**
+   * The whole `useCellStatus()` state. Not just the map: cells validate
+   * their own committed values against the column schema, so they need the
+   * setters. The sheet creates its own when this is omitted; pass one when
+   * `useRowChanges` or your own handlers report to it.
+   */
+  cellStatus?: CellStatusState;
+  /**
+   * From `useRowChanges()`. Pass it to submit per row instead of per cell —
+   * editable cells then stage their committed values here. Omit to keep each
+   * cell performing its own write through its `onCommit`.
+   */
+  rowChanges?: RowChangesState;
+};
 
 /**
  * Drops undefined entries. TanStack spreads options over its defaults, so an
@@ -49,10 +114,10 @@ function defined<T extends object>(values: T): T {
 }
 
 /**
- * `useReactTable` with a sheet's defaults: sorting and filtering in the
- * browser (TanStack skips them when `manualSorting` / `manualFiltering` is
- * set, for server-side data), each column's values and counts for its filter,
- * and live column resizing. Any option the app passes wins.
+ * `useTable` with a sheet's defaults: sorting and filtering in the browser
+ * (TanStack skips them when `manualSorting` / `manualFiltering` is set, for
+ * server-side data), each column's values and counts for its filter, and
+ * live column resizing. Any option the app passes wins.
  */
 export function useSheet<TData extends RowData>({
   cellStatus,
@@ -62,20 +127,12 @@ export function useSheet<TData extends RowData>({
   // Cells report validation and save failures through this, so every sheet
   // has one, not only those that save per row.
   const ownCellStatus = useCellStatus();
-  const table = useReactTable<TData>({
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    // Counted per column only when asked for: when a values filter opens.
-    getFacetedRowModel: getFacetedRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
+  const table = useTable<SheetFeatures, TData>({
     enableColumnResizing: true,
     columnResizeMode: 'onChange',
-    // There is no pagination UI, and resetting the page index on every data
-    // change would loop forever when an app passes data that is not memoised.
-    autoResetPageIndex: false,
     ...defined(options),
     ...(options.state ? { state: defined(options.state) } : {}),
+    features: sheetFeatures,
   });
 
   return { table, cellStatus: cellStatus ?? ownCellStatus, rowChanges };

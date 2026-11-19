@@ -1,39 +1,44 @@
 import { useContext } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { textFilter, useSheet, valuesFilter } from '@codemancers/sheets';
+import {
+  textFilter,
+  useSheet,
+  valuesFilter,
+  type SheetFeatures,
+} from '@codemancers/sheets';
 import { Sheet } from '@codemancers/sheets/ui';
 import { RtlContext } from '../direction';
 import { makeTasks, type Task } from '../data';
 
 const TASKS = makeTasks(1000);
-const task = createColumnHelper<Task>();
+const task = createColumnHelper<SheetFeatures, Task>();
 
 // Group headers, and a header that renders markup instead of a string.
-const columns = [
+const columns = task.columns([
   task.group({
     id: 'task',
     header: 'Task',
-    columns: [
+    columns: task.columns([
       task.accessor('title', {
         header: 'Title',
         size: 300,
         filterFn: textFilter,
       }),
       task.accessor('status', { header: 'Status', filterFn: valuesFilter }),
-    ],
+    ]),
   }),
   task.group({
     id: 'assignment',
     header: 'Assignment',
-    columns: [
+    columns: task.columns([
       task.accessor('owner', { header: 'Owner', filterFn: valuesFilter }),
       task.accessor('due', {
         header: () => <abbr title="Due date">Due</abbr>,
         size: 120,
       }),
-    ],
+    ]),
   }),
-];
+]);
 
 /** Sorted and filtered in the browser, the default. No virtualization yet. */
 export function LargeDemo() {

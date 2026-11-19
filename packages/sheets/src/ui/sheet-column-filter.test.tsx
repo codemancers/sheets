@@ -2,16 +2,16 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createColumnHelper } from '@tanstack/react-table';
 import { textFilter, valuesFilter } from '../hooks/filters.js';
-import { useSheet } from '../hooks/use-sheet.js';
+import { useSheet, type SheetFeatures } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 
 type Task = { id: string; title: string; status: string; owner: string };
-const task = createColumnHelper<Task>();
-const columns = [
+const task = createColumnHelper<SheetFeatures, Task>();
+const columns = task.columns([
   task.accessor('title', { header: 'Title', filterFn: textFilter }),
   task.accessor('status', { header: 'Status', filterFn: valuesFilter }),
   task.accessor('owner', { header: 'Owner' }),
-];
+]);
 const tasks: Task[] = [
   { id: '1', title: 'Write docs', status: 'Todo', owner: 'Ada' },
   { id: '2', title: 'Fix the docs build', status: 'Done', owner: 'Alan' },
@@ -113,28 +113,6 @@ describe('SheetColumnFilter', () => {
       screen.getByRole('checkbox', { name: 'Todo 0' }).matches(':checked'),
     ).toBe(true);
     expect(screen.getByRole('checkbox', { name: 'Done 1' })).toBeTruthy();
-  });
-
-  it('lists the values the app supplies, such as counts from a server', () => {
-    const counts = new Map([
-      ['Todo', 12],
-      ['Done', 30],
-    ]);
-    function ServerTasks() {
-      const sheet = useSheet({
-        columns,
-        data: tasks,
-        getRowId: (row) => row.id,
-        manualFiltering: true,
-        getFacetedUniqueValues: () => () => counts,
-      });
-      return <Sheet instance={sheet} />;
-    }
-    render(<ServerTasks />);
-    openFilter('Filter Status');
-
-    expect(screen.getByRole('checkbox', { name: 'Done 30' })).toBeTruthy();
-    expect(screen.getByRole('checkbox', { name: 'Todo 12' })).toBeTruthy();
   });
 
   it('clears its column and closes', () => {

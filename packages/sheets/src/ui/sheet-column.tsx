@@ -7,20 +7,21 @@ import {
   FunnelIcon,
 } from './icons.js';
 import { cx } from './cx.js';
-import { flexRender, type Header } from '@tanstack/react-table';
+import { flexRender, type Header, type RowData } from '@tanstack/react-table';
+import type { SheetFeatures } from '../hooks/use-sheet.js';
 import { useSheetLabels } from './labels.js';
 import { columnFilterKind, SheetColumnFilter } from './sheet-column-filter.js';
 
 /** Pixels per arrow key on the resize handle; Shift moves five steps. */
 const RESIZE_STEP = 10;
 
-export type SheetColumnProps<TData> = {
-  header: Header<TData, unknown>;
+export type SheetColumnProps<TData extends RowData> = {
+  header: Header<SheetFeatures, TData, unknown>;
   isFirstCol?: boolean;
   className?: string;
 };
 
-export function SheetColumn<TData>({
+export function SheetColumn<TData extends RowData>({
   header,
   isFirstCol,
   className,
