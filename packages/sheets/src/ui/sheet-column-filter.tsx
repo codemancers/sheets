@@ -1,8 +1,9 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import type { Column } from '@tanstack/react-table';
+import type { Column, RowData } from '@tanstack/react-table';
 import { textFilter, valuesFilter } from '../hooks/filters.js';
+import type { SheetFeatures } from '../hooks/use-sheet.js';
 import { cx } from './cx.js';
 import { FunnelIcon } from './icons.js';
 import { useSheetLabels } from './labels.js';
@@ -10,18 +11,20 @@ import { useSheetLabels } from './labels.js';
 type FilterKind = 'text' | 'values';
 
 /** The filter control a column asked for through its `filterFn`, if any. */
-export function columnFilterKind<TData>(
-  column: Column<TData, unknown>,
+export function columnFilterKind<TData extends RowData>(
+  column: Column<SheetFeatures, TData, unknown>,
 ): FilterKind | undefined {
   if (!column.getCanFilter()) return undefined;
-  const { filterFn } = column.columnDef;
+  // Only compared by identity, and TypeScript finds no overlap between a
+  // column's filter function type and a built-in one's.
+  const filterFn: unknown = column.columnDef.filterFn;
   if (filterFn === textFilter) return 'text';
   if (filterFn === valuesFilter) return 'values';
   return undefined;
 }
 
-type SheetColumnFilterProps<TData> = {
-  column: Column<TData, unknown>;
+type SheetColumnFilterProps<TData extends RowData> = {
+  column: Column<SheetFeatures, TData, unknown>;
   kind: FilterKind;
   /** The column's name, as in "Filter Title". */
   label: string;
@@ -34,7 +37,7 @@ type SheetColumnFilterProps<TData> = {
  * on a click outside and returns focus to the button. CSS anchor positioning
  * places it under the button, mirrored in right-to-left layouts.
  */
-export function SheetColumnFilter<TData>({
+export function SheetColumnFilter<TData extends RowData>({
   column,
   kind,
   label,
@@ -116,12 +119,12 @@ export function SheetColumnFilter<TData>({
   );
 }
 
-function TextFilter<TData>({
+function TextFilter<TData extends RowData>({
   column,
   label,
   close,
 }: {
-  column: Column<TData, unknown>;
+  column: Column<SheetFeatures, TData, unknown>;
   label: string;
   close: () => void;
 }) {
@@ -147,7 +150,11 @@ function TextFilter<TData>({
   );
 }
 
-function ValuesFilter<TData>({ column }: { column: Column<TData, unknown> }) {
+function ValuesFilter<TData extends RowData>({
+  column,
+}: {
+  column: Column<SheetFeatures, TData, unknown>;
+}) {
   const labels = useSheetLabels();
   const value = column.getFilterValue();
   const picked = Array.isArray(value) ? value : [];

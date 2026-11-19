@@ -1,6 +1,11 @@
 import { useState, useContext } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useCellStatus, useRowChanges, useSheet } from '@codemancers/sheets';
+import {
+  useCellStatus,
+  useRowChanges,
+  useSheet,
+  type SheetFeatures,
+} from '@codemancers/sheets';
 import {
   Sheet,
   SheetEditableTextCell,
@@ -10,9 +15,9 @@ import {
 import { makeTasks, requiredTitle, saveTask, type Task } from '../data';
 import { RtlContext } from '../direction';
 
-const task = createColumnHelper<Task>();
+const task = createColumnHelper<SheetFeatures, Task>();
 
-const columns = [
+const columns = task.columns([
   task.accessor('title', {
     header: 'Title',
     size: 320,
@@ -43,7 +48,7 @@ const columns = [
     header: 'Status',
     cell: ({ getValue }) => <SheetTextCell muted>{getValue()}</SheetTextCell>,
   }),
-];
+]);
 
 export function EditingDemo() {
   const rtl = useContext(RtlContext);

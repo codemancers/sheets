@@ -1,5 +1,5 @@
 import { createColumnHelper } from '@tanstack/react-table';
-import type { CellCommitResult } from '@codemancers/sheets';
+import type { CellCommitResult, SheetFeatures } from '@codemancers/sheets';
 import {
   SheetEditableTextCell,
   SheetPrimaryCell,
@@ -7,7 +7,7 @@ import {
 } from '@codemancers/sheets/ui';
 import type { Task } from '../data';
 
-const task = createColumnHelper<Task>();
+const task = createColumnHelper<SheetFeatures, Task>();
 
 /** A row being filled in to create a task: its title cell is an editor. */
 export type NewTaskRow = {
@@ -21,7 +21,7 @@ export function taskColumns(
   onOpen?: (task: Task) => void,
   newRow?: NewTaskRow,
 ) {
-  return [
+  return task.columns([
     task.accessor('title', {
       header: 'Title',
       size: 300,
@@ -52,5 +52,5 @@ export function taskColumns(
     // Plain values need no cell renderer.
     task.accessor('owner', { header: 'Owner' }),
     task.accessor('due', { header: 'Due', size: 120 }),
-  ];
+  ]);
 }

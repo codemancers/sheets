@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Row, RowData } from '@tanstack/react-table';
-import type { SheetInstance } from '../hooks/use-sheet.js';
+import type { SheetFeatures, SheetInstance } from '../hooks/use-sheet.js';
 import type { CellStatusState } from '../hooks/use-cell-status.js';
 import type { RowChangesState } from '../hooks/use-row-changes.js';
 import { SheetAddRow } from './sheet-add-row.js';
@@ -64,7 +64,7 @@ export type SheetProps<TData extends RowData> = {
 };
 
 type SheetBodyProps<TData extends RowData> = {
-  rows: Row<TData>[];
+  rows: Row<SheetFeatures, TData>[];
   rowHeight: number;
   highlightedRowId?: string;
   openRowId?: string | null;
@@ -198,7 +198,7 @@ export function Sheet<TData extends RowData>({
             <SheetEmpty>
               {/* `emptyState` means there's no data. Here there is, but the
                   filters hide all of it. */}
-              {table.getState().columnFilters.length > 0 ? (
+              {table.state.columnFilters.length > 0 ? (
                 <>
                   {text.noMatches}{' '}
                   <button
@@ -221,9 +221,7 @@ export function Sheet<TData extends RowData>({
               openRowId={openRowId}
               cellStatus={cellStatus}
               rowChanges={rowChanges}
-              resizing={Boolean(
-                table.getState().columnSizingInfo.isResizingColumn,
-              )}
+              resizing={Boolean(table.state.columnResizing.isResizingColumn)}
             />
           )}
         </div>

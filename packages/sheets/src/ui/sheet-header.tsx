@@ -1,14 +1,17 @@
-import type { Table } from '@tanstack/react-table';
+import type { RowData, Table } from '@tanstack/react-table';
+import type { SheetFeatures } from '../hooks/use-sheet.js';
 import { SheetColumn } from './sheet-column.js';
 import { SheetRowNumber } from './sheet-row-number.js';
 import { SheetSpacerColumn } from './sheet-spacer-column.js';
 import { sheetGrid } from './grid.js';
 
-export type SheetHeaderProps<TData> = {
-  table: Table<TData>;
+export type SheetHeaderProps<TData extends RowData> = {
+  table: Table<SheetFeatures, TData>;
 };
 
-export function SheetHeader<TData>({ table }: SheetHeaderProps<TData>) {
+export function SheetHeader<TData extends RowData>({
+  table,
+}: SheetHeaderProps<TData>) {
   return (
     <div
       role="rowgroup"

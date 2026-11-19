@@ -1,19 +1,28 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { createColumnHelper, type SortingState } from '@tanstack/react-table';
+import {
+  createColumnHelper,
+  sortFn_textCaseSensitive,
+  type SortingState,
+} from '@tanstack/react-table';
 import { useCellStatus } from './use-cell-status.js';
-import { useSheet } from './use-sheet.js';
+import {
+  useSheet,
+  type SheetColumnDef,
+  type SheetFeatures,
+} from './use-sheet.js';
 
 type Row = { id: string; name: string };
 
-const column = createColumnHelper<Row>();
-const columns = [column.accessor('name', { header: 'Name' })];
+const column = createColumnHelper<SheetFeatures, Row>();
+const columns = column.columns([column.accessor('name', { header: 'Name' })]);
 const data: Row[] = [
   { id: '1', name: 'b' },
   { id: '2', name: 'a' },
 ];
-const names = (result: { current: ReturnType<typeof useSheet<Row>> }) =>
-  result.current.table.getRowModel().rows.map((row) => row.original.name);
+const names = (result: {
+  current: { table: { getRowModel: () => { rows: { original: Row }[] } } };
+}) => result.current.table.getRowModel().rows.map((row) => row.original.name);
 
 describe('useSheet', () => {
   it('sorts in the browser by default', () => {
@@ -31,7 +40,7 @@ describe('useSheet', () => {
 
     act(() => result.current.table.getColumn('name')?.toggleSorting(false));
 
-    expect(result.current.table.getState().sorting).toEqual([
+    expect(result.current.table.state.sorting).toEqual([
       { id: 'name', desc: false },
     ]);
     expect(names(result)).toEqual(['b', 'a']);
@@ -60,6 +69,75 @@ describe('useSheet', () => {
     );
   });
 
+  it('sorts numbers and dates without a sortFn', () => {
+    type Entry = { id: string; count: number; on: Date };
+    const entries: Entry[] = [
+      { id: '1', count: 10, on: new Date('2026-03-01') },
+      { id: '2', count: 9, on: new Date('2026-01-01') },
+    ];
+    const entryColumns: SheetColumnDef<Entry>[] = [
+      { accessorKey: 'count' },
+      { accessorKey: 'on' },
+    ];
+    const { result } = renderHook(() =>
+      useSheet({ columns: entryColumns, data: entries }),
+    );
+    const ids = () =>
+      result.current.table.getRowModel().rows.map((row) => row.original.id);
+
+    act(() => result.current.table.getColumn('count')?.toggleSorting(false));
+    expect(ids()).toEqual(['2', '1']);
+
+    act(() => result.current.table.getColumn('on')?.toggleSorting(false));
+    expect(ids()).toEqual(['2', '1']);
+  });
+
+  it('filters across columns with the global filter', () => {
+    const { result } = renderHook(() => useSheet({ columns, data }));
+
+    act(() => result.current.table.setGlobalFilter('a'));
+
+    expect(names(result)).toEqual(['a']);
+  });
+
+  it('reorders columns', () => {
+    const twoColumns = column.columns([
+      column.accessor('id', {}),
+      column.accessor('name', {}),
+    ]);
+    const { result } = renderHook(() =>
+      useSheet({ columns: twoColumns, data }),
+    );
+
+    act(() => result.current.table.setColumnOrder(['name', 'id']));
+
+    expect(
+      result.current.table.getVisibleLeafColumns().map((leaf) => leaf.id),
+    ).toEqual(['name', 'id']);
+  });
+
+  // A custom sort function goes straight on the column, as v9's docs show:
+  // the sheet's feature set is fixed, so nothing is registered by name.
+  it('sorts with a function set on the column', () => {
+    const mixed: Row[] = [
+      { id: '1', name: 'b' },
+      { id: '2', name: 'B' },
+      { id: '3', name: 'a' },
+    ];
+    const { result } = renderHook(() =>
+      useSheet({
+        columns: column.columns([
+          column.accessor('name', { sortFn: sortFn_textCaseSensitive }),
+        ]),
+        data: mixed,
+      }),
+    );
+
+    act(() => result.current.table.getColumn('name')?.toggleSorting(false));
+
+    expect(names(result)).toEqual(['B', 'a', 'b']);
+  });
+
   describe('controlled state', () => {
     it('leaves the state to the app and reports the change', () => {
       const onSortingChange = vi.fn();
@@ -69,7 +147,7 @@ describe('useSheet', () => {
 
       act(() => result.current.table.getColumn('name')?.toggleSorting(false));
 
-      expect(result.current.table.getState().sorting).toEqual([]);
+      expect(result.current.table.state.sorting).toEqual([]);
       expect(onSortingChange).toHaveBeenCalledTimes(1);
     });
 
@@ -90,7 +168,7 @@ describe('useSheet', () => {
       act(() => result.current.table.getColumn('name')?.toggleSorting(true));
       rerender();
 
-      expect(result.current.table.getState().sorting).toEqual([
+      expect(result.current.table.state.sorting).toEqual([
         { id: 'name', desc: true },
       ]);
     });

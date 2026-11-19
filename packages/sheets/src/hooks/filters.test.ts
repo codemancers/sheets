@@ -2,15 +2,15 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createColumnHelper } from '@tanstack/react-table';
 import { textFilter, valuesFilter } from './filters.js';
-import { useSheet } from './use-sheet.js';
+import { useSheet, type SheetFeatures } from './use-sheet.js';
 
 type Row = { id: string; name: string; status: string };
 
-const column = createColumnHelper<Row>();
-const columns = [
+const column = createColumnHelper<SheetFeatures, Row>();
+const columns = column.columns([
   column.accessor('name', { filterFn: textFilter }),
   column.accessor('status', { filterFn: valuesFilter }),
-];
+]);
 const data: Row[] = [
   { id: '1', name: 'Alpha', status: 'Todo' },
   { id: '2', name: 'Beta', status: 'Done' },
@@ -24,7 +24,7 @@ function filterBy(columnId: string, value: unknown) {
   act(() => result.current.table.getColumn(columnId)?.setFilterValue(value));
   return {
     ids: result.current.table.getRowModel().rows.map((row) => row.id),
-    filters: result.current.table.getState().columnFilters,
+    filters: result.current.table.state.columnFilters,
   };
 }
 

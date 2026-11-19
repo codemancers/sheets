@@ -1,14 +1,14 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { createColumnHelper } from '@tanstack/react-table';
 import { textFilter } from '../hooks/filters.js';
-import { useSheet } from '../hooks/use-sheet.js';
+import { useSheet, type SheetFeatures } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
 import { SheetEditableTextCell } from './cells/editable-text-cell.js';
 import { useSheetLabels, type SheetLabels } from './labels.js';
 
 type Row = { id: number; name: string };
-const rowColumn = createColumnHelper<Row>();
+const rowColumn = createColumnHelper<SheetFeatures, Row>();
 
 function TestSheet({
   data,
@@ -18,7 +18,9 @@ function TestSheet({
   isLoading?: boolean;
 }) {
   const sheet = useSheet({
-    columns: [rowColumn.accessor('name', { header: 'Name' })],
+    columns: rowColumn.columns([
+      rowColumn.accessor('name', { header: 'Name' }),
+    ]),
     data,
     getRowId: (row) => String(row.id),
   });
@@ -48,14 +50,14 @@ describe('Sheet', () => {
   it('keeps an open editor through a render that rebuilds the columns', () => {
     function InlineColumns() {
       const sheet = useSheet({
-        columns: [
+        columns: rowColumn.columns([
           rowColumn.accessor('name', {
             header: 'Name',
             cell: ({ row }) => (
               <SheetEditableTextCell value={row.original.name} />
             ),
           }),
-        ],
+        ]),
         data: [{ id: 1, name: 'Alpha' }],
         getRowId: (row) => String(row.id),
       });
@@ -80,20 +82,20 @@ describe('Sheet', () => {
 
   it('renders function headers, and group headers spanning their columns', () => {
     type Person = { id: string; first: string; last: string; age: number };
-    const person = createColumnHelper<Person>();
+    const person = createColumnHelper<SheetFeatures, Person>();
     function Grouped() {
       const sheet = useSheet({
-        columns: [
+        columns: person.columns([
           person.group({
             id: 'name',
             header: 'Name',
-            columns: [
+            columns: person.columns([
               person.accessor('first', { header: 'First' }),
               person.accessor('last', { header: () => <em>Last</em> }),
-            ],
+            ]),
           }),
           person.accessor('age', { header: 'Age' }),
-        ],
+        ]),
         data: [{ id: '1', first: 'Ada', last: 'Lovelace', age: 36 }],
         getRowId: (p) => p.id,
       });
@@ -112,7 +114,9 @@ describe('Sheet', () => {
   it('marks the row open in a drawer as the current one', () => {
     function WithOpenRow() {
       const sheet = useSheet({
-        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        columns: rowColumn.columns([
+          rowColumn.accessor('name', { header: 'Name' }),
+        ]),
         data: [
           { id: 1, name: 'Alpha' },
           { id: 2, name: 'Beta' },
@@ -135,7 +139,9 @@ describe('Sheet', () => {
 
     function WithNewRow({ data }: { data: Row[] }) {
       const sheet = useSheet({
-        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        columns: rowColumn.columns([
+          rowColumn.accessor('name', { header: 'Name' }),
+        ]),
         data,
         getRowId: (row) => (row.id === 0 ? 'new' : String(row.id)),
         state: { rowPinning },
@@ -173,7 +179,7 @@ describe('Sheet', () => {
 
   describe('accessibility', () => {
     type Task = { id: string; title: string };
-    const taskColumn = createColumnHelper<Task>();
+    const taskColumn = createColumnHelper<SheetFeatures, Task>();
 
     function TaskSheet({
       isLoading = false,
@@ -183,7 +189,7 @@ describe('Sheet', () => {
       labels?: Partial<SheetLabels>;
     }) {
       const sheet = useSheet({
-        columns: [
+        columns: taskColumn.columns([
           taskColumn.accessor('title', {
             header: 'Title',
             size: 200,
@@ -191,7 +197,7 @@ describe('Sheet', () => {
               <SheetEditableTextCell value={row.original.title} />
             ),
           }),
-        ],
+        ]),
         data: [{ id: '1', title: 'Alpha' }],
         getRowId: (task) => task.id,
       });
@@ -303,7 +309,7 @@ describe('Sheet', () => {
     it('shows the empty label in a cell of the table', () => {
       function Empty() {
         const sheet = useSheet({
-          columns: [rowColumn.accessor('name', {})],
+          columns: rowColumn.columns([rowColumn.accessor('name', {})]),
           data: [],
         });
         return <Sheet instance={sheet} labels={{ empty: 'Sin datos' }} />;
@@ -321,20 +327,20 @@ describe('Sheet', () => {
   // each row's number cell, re-renders on every frame of a drag.
   it('keeps label readers still during a drag when labels are inline', () => {
     type Task = { id: string; title: string };
-    const taskColumn = createColumnHelper<Task>();
+    const taskColumn = createColumnHelper<SheetFeatures, Task>();
     const labelReads = vi.fn();
     function ReadsLabels() {
       useSheetLabels();
       labelReads();
       return null;
     }
-    const columns = [
+    const columns = taskColumn.columns([
       taskColumn.accessor('title', {
         header: 'Title',
         size: 200,
         cell: () => <ReadsLabels />,
       }),
-    ];
+    ]);
     const data = [{ id: '1', title: 'Alpha' }];
     function DragSheet() {
       const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
@@ -355,7 +361,9 @@ describe('Sheet', () => {
   it('updates its labels when their values change', () => {
     function Labelled({ addRow }: { addRow: string }) {
       const sheet = useSheet({
-        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        columns: rowColumn.columns([
+          rowColumn.accessor('name', { header: 'Name' }),
+        ]),
         data: [],
       });
       return <Sheet instance={sheet} onAddRow={vi.fn()} labels={{ addRow }} />;
@@ -371,9 +379,9 @@ describe('Sheet', () => {
   it('says when the filters hide every row, and clears them', () => {
     function Filtered() {
       const sheet = useSheet({
-        columns: [
+        columns: rowColumn.columns([
           rowColumn.accessor('name', { header: 'Name', filterFn: textFilter }),
-        ],
+        ]),
         data: [{ id: 1, name: 'Alpha' }],
         getRowId: (row) => String(row.id),
         initialState: { columnFilters: [{ id: 'name', value: 'zzz' }] },
@@ -392,7 +400,9 @@ describe('Sheet', () => {
   it('marks the highlighted row with data-highlighted', () => {
     function Highlighted() {
       const sheet = useSheet({
-        columns: [rowColumn.accessor('name', { header: 'Name' })],
+        columns: rowColumn.columns([
+          rowColumn.accessor('name', { header: 'Name' }),
+        ]),
         data: [
           { id: 1, name: 'Alpha' },
           { id: 2, name: 'Beta' },
@@ -408,11 +418,11 @@ describe('Sheet', () => {
     expect(beta.getAttribute('data-highlighted')).toBe('true');
   });
 
-  it('does not re-render the rows while a column is dragged', () => {
+  it('does not re-render the rows while a column is dragged', async () => {
     type Task = { id: string; title: string };
-    const taskColumn = createColumnHelper<Task>();
+    const taskColumn = createColumnHelper<SheetFeatures, Task>();
     const cellRenders = vi.fn();
-    const columns = [
+    const columns = taskColumn.columns([
       taskColumn.accessor('title', {
         header: 'Title',
         size: 200,
@@ -421,7 +431,7 @@ describe('Sheet', () => {
           return getValue();
         },
       }),
-    ];
+    ]);
     const data = [{ id: '1', title: 'Alpha' }];
     function DragSheet() {
       const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
@@ -435,6 +445,9 @@ describe('Sheet', () => {
     const before = cellRenders.mock.calls.length;
     fireEvent.mouseMove(document, { clientX: 140 });
     fireEvent.mouseMove(document, { clientX: 180 });
+    await act(
+      () => new Promise<void>((done) => requestAnimationFrame(() => done())),
+    );
 
     expect(root.style.getPropertyValue('--sheet-columns')).toContain('280px');
     expect(cellRenders.mock.calls.length).toBe(before);
