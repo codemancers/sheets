@@ -4,7 +4,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 
 ![A sheet with a saved edit, and a refused one showing its reason](https://raw.githubusercontent.com/codemancers/sheets/main/docs/images/sheet.png)
 
-- **Spreadsheet layout:** row numbers, a sticky header, resizable columns, grouped headers, a sticky add-row footer, and loading and empty states.
+- **Spreadsheet layout:** row numbers, a sticky header, resizable columns, grouped headers, an add-row button below the rows, and loading and empty states.
 - **In-place editing:** click a cell, type, then Enter to save or Escape to cancel. Each cell shows its own status: unsaved, saving, saved or refused.
 - **Saving per row:** edits to one row can be batched into a single request. If the server refuses a field, the error appears on that field's cell.
 - **Validation** with any [Standard Schema](https://standardschema.dev) library (zod, Valibot, ArkType and others).
@@ -333,12 +333,12 @@ function PriorityCell({ value }: { value: number }) {
   - `accepts`, which runs the schema and reports a failure on the cell
   - `abandon` and `clearOnEditStart`
   - `label`, the column's header, for naming your editor
-- `useInlineEdit` handles text-style editors: Enter, Escape, saving on blur, IME input, and returning focus to the cell. It calls `onCancel` on Escape, and when an edit ends with nothing to save.
+- `useInlineEdit` handles text-style editors: Enter, Escape, saving on blur, IME input, and returning focus to the cell. It calls `onCancel` on Escape, and when an edit ends with nothing to save. `beginEdit(draft)` opens the editor on `draft` instead of the value, which is how the built-in cells open on a typed key.
 - Report outcomes through `cellStatus`, and `SheetCell` draws the icons.
 
 ## Layout and states
 
-`<Sheet>` fills its parent (`h-full w-full`) and scrolls inside it. The header and the add-row footer stay pinned while the rows scroll. Give the parent a height:
+`<Sheet>` fills its parent (`h-full w-full`) and scrolls inside it. The header stays pinned while the rows scroll, and the add-row button follows the last row, in the row-number column. Give the parent a height:
 
 ```tsx
 // Fill the rest of a full-height page
@@ -356,7 +356,7 @@ Column widths come from `size` (TanStack's default is 150px). After the last col
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders.        |
 | `emptyState`             | Content for a row that spans the columns when there's no data. Defaults to the `empty` label.                                             |
-| `onAddRow`               | Shows the sticky add-row footer. `addRowDisabled` disables its button. See [Adding rows](#adding-rows).                                   |
+| `onAddRow`               | Shows the add-row button, right below the rows. `addRowDisabled` disables it. See [Adding rows](#adding-rows).                            |
 | `highlightedRowId`       | Highlights a row and scrolls it into view, and marks it `data-highlighted` for tests. Clear it after a moment to fade the highlight.      |
 | `openRowId`              | Marks the row that is open in a drawer: highlighted, and announced as current. See [Opening rows in a drawer](#opening-rows-in-a-drawer). |
 | `rowHeight`, `className` | The minimum row height, and extra classes for the scroll container.                                                                       |
@@ -375,7 +375,7 @@ useEffect(() => {
 
 ## Adding rows
 
-`onAddRow` shows the add-row footer. To create a record from a new row in the sheet, add a temporary row to `data`, and give its first cell an editor:
+`onAddRow` shows the add-row button. To create a record from a new row in the sheet, add a temporary row to `data`, and give its first cell an editor:
 
 ```tsx
 const NEW_ROW = 'new';
@@ -517,7 +517,7 @@ To follow your design system's CSS variables, such as shadcn's, use `@theme inli
 | --------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `sheet-bg`, `sheet-fg`                                                | Background and text. Borders and hover tints are `fg` at low opacity. |
 | `sheet-muted`, `sheet-faint`                                          | Secondary text, and placeholders                                      |
-| `sheet-raised`                                                        | The add-row footer on hover, and the filter panel                     |
+| `sheet-raised`                                                        | The add-row button's row on hover, and the filter panel               |
 | `sheet-skeleton`                                                      | Loading placeholders                                                  |
 | `sheet-tooltip`, `sheet-tooltip-fg`                                   | The error tooltip                                                     |
 | `sheet-link`, `sheet-link-hover`                                      | Links                                                                 |
@@ -598,7 +598,8 @@ const { table } = useSheet({ columns, data, getRowId: (task) => task.id });
 - **Keyboard:**
   - Tab reaches the sort and filter buttons, resize handles, cells and row actions. Row actions appear on focus as well as hover.
   - A filter button opens its filter with focus inside it. Escape, or Enter in a text filter, closes it and returns focus to the button.
-  - Enter or Space opens an editable cell. Enter saves, Escape cancels, and both return focus to the cell. Tab saves and moves on to the next cell.
+  - Enter or Space opens an editable cell with its value. In the built-in cells, F2 does too, and typing a character opens it with that character instead, replacing the value, as in a spreadsheet.
+  - Enter saves, Escape cancels, and both return focus to the cell. Tab saves and moves on to the next cell, so you can type, press Tab and type again.
   - On a focused resize handle, the arrow keys resize the column (Shift for bigger steps), and a double-click resets it.
 - **Screen readers:** editors are named after their column. Saving statuses are announced, and refused values are announced as alerts.
 - **Testing:** the playground is scanned with axe in CI, and any violation fails the build.
@@ -629,7 +630,7 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 | `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own.                                                                                     |
 | `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                                         |
 | `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                                                 |
-| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                                     |
+| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit(draft?)`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                             |
 | `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                                      |
 | `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                                                |
 | `textFilter`, `valuesFilter`               | Filter functions for a column's `filterFn`: the text it contains, or one of a checklist of values. Either one gives the column's header a filter button.                                                                                          |

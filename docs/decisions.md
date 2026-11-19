@@ -30,6 +30,7 @@ When you make a choice that a future contributor would question, add it here.
 
 ## Editing and saving
 
+- **Typing into a focused cell opens it, replacing the value.** That's how a spreadsheet takes data entry: type, press Tab, type again. The W3C's grid pattern also lists letters and F2 as ways into a cell's editor. Space still opens the editor with the value kept, since it's how a button is pressed. The cost is that one stray key and a click away saves a one-character value, because blur saves. Escape undoes it. Only the built-in cells do this; a cell built on `useInlineEdit` calls `beginEdit(draft)` itself.
 - **Outcomes show on the cell:**
   - A dot while unsaved, a spinner while saving, a tick once saved, or an error icon with a tooltip. A toast can't say which cell it's about.
   - The cell itself isn't tinted, because in a grid with a few bad values, tinting turns it into a wall of red.
@@ -63,6 +64,7 @@ When you make a choice that a future contributor would question, add it here.
 - **The filter panel is a native popover, placed with CSS anchor positioning.** The top layer keeps it from being clipped by the sheet's scroll container, and the browser closes it on a click outside and returns focus to its button, so there's no portal and no positioning code. Anchor positioning has been in every major browser since January 2026.
 - **Filter controls mount only while the panel is open.** A checklist counts its column's values when it mounts, so a sheet with many filterable columns doesn't count them all on every render. Mounting on open also lets `autoFocus` move focus into the panel, which content that's always mounted couldn't do.
 - **No virtualization yet.** Every row is rendered. The playground's 1,000-row demo shows how that performs. Virtualization is planned for a later release.
+- **The add-row button follows the last row,** rather than being pinned to the bottom of the sheet, and sits in the row-number column, where the next row's number would be. It belongs with the rows it adds to, and on a short list a pinned footer left a gap above it. On a long list, you scroll to the end to reach it.
 - **No empty gridlines below the last row.** When the rows don't fill the sheet, the space below them stays blank, since empty cells would look like rows that exist.
 
 ## Accessibility and languages

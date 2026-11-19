@@ -183,6 +183,25 @@ test.describe('keyboard', () => {
 
     await expect(row.getByRole('button', { name: 'Grace' })).toBeFocused();
   });
+
+  // Data entry: type into a cell, Tab, type into the next, as in a spreadsheet.
+  test('types straight into a cell, then Tab and the next', async ({
+    page,
+  }) => {
+    const row = dataRow(page, 'Inline editing', 2);
+    await row.getByRole('button', { name: 'Accessibility pass' }).focus();
+
+    await page.keyboard.type('Audit the docs');
+    await expect(row.getByRole('textbox')).toHaveValue('Audit the docs');
+    await page.keyboard.press('Tab');
+    await expect(row.getByRole('button', { name: 'Grace' })).toBeFocused();
+    await page.keyboard.type('Linus');
+    await expect(row.getByRole('textbox')).toHaveValue('Linus');
+    await page.keyboard.press('Tab');
+
+    await expect(row.getByRole('status')).toHaveText(['Saved', 'Saved']);
+    await expect(row).toContainText('Audit the docs');
+  });
 });
 
 test.describe('full screen', () => {
@@ -219,6 +238,21 @@ test.describe('full screen', () => {
 });
 
 test.describe('adding rows', () => {
+  test('puts the add button right below the rows', async ({ page }) => {
+    const region = demo(page, 'Adding rows');
+    const rows = region.getByRole('row');
+    // The last row is the add button's own; the one before it, the last task.
+    const lastTask = await rows.nth((await rows.count()) - 2).boundingBox();
+    const add = await region
+      .getByRole('button', { name: 'Add task' })
+      .boundingBox();
+
+    if (!lastTask || !add) throw new Error('Nothing to measure');
+    expect(
+      Math.abs(add.y - (lastTask.y + lastTask.height)),
+    ).toBeLessThanOrEqual(1);
+  });
+
   test('creates a task from the new row', async ({ page }) => {
     const region = demo(page, 'Adding rows');
     // Header, three tasks and the add-row footer.

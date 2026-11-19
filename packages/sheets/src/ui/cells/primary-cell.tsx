@@ -1,6 +1,7 @@
 'use client';
 
 import { cx } from '../cx.js';
+import { editOnKey } from './edit-key.js';
 import { ArrowUpRight, PanelRight } from '../icons.js';
 import { useSheetLabels } from '../labels.js';
 import type { MouseEvent, ReactNode } from 'react';
@@ -171,6 +172,13 @@ export function SheetPrimaryCell({
       onCancel: end,
     });
 
+  // A click, F2 or a typed key on the editable name.
+  const start = (draft?: string) => {
+    cell.clearOnEditStart();
+    editable?.onEditStart?.();
+    beginEdit(draft);
+  };
+
   if (editable && isEditing) {
     return (
       <input
@@ -196,11 +204,8 @@ export function SheetPrimaryCell({
         <button
           ref={triggerRef}
           type="button"
-          onClick={() => {
-            cell.clearOnEditStart();
-            editable.onEditStart?.();
-            beginEdit();
-          }}
+          onClick={() => start()}
+          onKeyDown={(event) => editOnKey(event, start)}
           className="block min-w-0 flex-1 cursor-text truncate px-2 py-1.5 text-start text-sm text-sheet-fg dark:text-sheet-fg-dark"
         >
           {/* An empty value means a refused edit is still on screen, so show the

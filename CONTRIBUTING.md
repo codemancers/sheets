@@ -55,6 +55,7 @@
    - Decide whether it stages into the row buffer. Make staging opt-in, as `SheetEditableTextCell`'s `stage` is, since a commit can mean creating a row rather than updating one.
    - Call the app's `onCommit` through `cell.submit(onCommit, value, labels.saveFailed)`, so a returned `{ error }`, or a throw, shows on the cell with the value kept.
    - End an edit with nothing to save through `onCancel`, as `useInlineEdit` does, so an empty new row can remove itself.
+   - Open on a typed key or F2: pass the trigger's key presses to `editOnKey` (`src/ui/cells/edit-key.ts`), so the cell takes data entry like the others.
 5. Export it from `src/ui/index.ts`, and document it in the package README.
 6. Test it inside a `SheetCellProvider`. A cell rendered on its own exercises none of the status reporting.
 

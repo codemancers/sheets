@@ -1,6 +1,7 @@
 'use client';
 
 import { cx } from '../cx.js';
+import { editOnKey } from './edit-key.js';
 import { useSheetLabels } from '../labels.js';
 import { useInlineEdit } from '../../hooks/use-inline-edit.js';
 import type {
@@ -97,6 +98,13 @@ export function SheetEditableTextCell({
       autoFocus,
     });
 
+  // A click, F2 or a typed key. The standing error on the cell goes: the user
+  // is acting on it.
+  const start = (draft?: string) => {
+    cell.clearOnEditStart();
+    beginEdit(draft);
+  };
+
   if (isEditing) {
     return (
       <input
@@ -116,10 +124,8 @@ export function SheetEditableTextCell({
     <button
       ref={triggerRef}
       type="button"
-      onClick={() => {
-        cell.clearOnEditStart();
-        beginEdit();
-      }}
+      onClick={() => start()}
+      onKeyDown={(event) => editOnKey(event, start)}
       className={cx(
         'block w-full cursor-text truncate px-2 py-1.5 text-start text-sm',
         displayValue

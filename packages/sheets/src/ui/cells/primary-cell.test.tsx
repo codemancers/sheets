@@ -198,6 +198,35 @@ describe('SheetPrimaryCell', () => {
       expect(onCommit).toHaveBeenCalledWith('Renamed Seven');
     });
 
+    it('opens on a typed character, which replaces the name', () => {
+      const onEditStart = vi.fn();
+      render(
+        <SheetPrimaryCell editable={{ value: 'Project Seven', onEditStart }}>
+          Project Seven
+        </SheetPrimaryCell>,
+      );
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Project Seven' }), {
+        key: 'N',
+      });
+
+      expect(screen.getByRole<HTMLInputElement>('textbox').value).toBe('N');
+      expect(onEditStart).toHaveBeenCalledTimes(1);
+    });
+
+    // Without `editable` the name opens the row, so typing on it does nothing.
+    it('ignores typing on a name that is not editable', () => {
+      render(
+        <SheetPrimaryCell onOpen={vi.fn()}>Project Seven</SheetPrimaryCell>,
+      );
+
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Project Seven' }), {
+        key: 'N',
+      });
+
+      expect(screen.queryByRole('textbox')).toBeNull();
+    });
+
     it('restores the name and does not commit on Escape', () => {
       const { onCommit } = renderEditable();
 

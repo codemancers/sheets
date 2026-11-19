@@ -215,10 +215,11 @@ function App() {
             title="Inline editing"
             description={
               <>
-                Click a title or owner to edit. A row&apos;s edits are batched
-                into one save after a 600 ms pause. Type <code>taken</code> as a
-                title to have it refused, or <code>offline</code> anywhere for a
-                network error.
+                Click a title or owner to edit, or focus one and type: Tab moves
+                on to the next. A row&apos;s edits are batched into one save
+                after a 600 ms pause. Type <code>taken</code> as a title to have
+                it refused, or <code>offline</code> anywhere for a network
+                error.
               </>
             }
           >
@@ -229,9 +230,9 @@ function App() {
             title="Adding rows"
             description={
               <>
-                The footer opens a new row at the bottom, where it stays even
-                when the list is sorted. Type a title and press Enter to create
-                the task, or leave it empty to discard it. Type{' '}
+                The add button opens a new row at the bottom, where it stays
+                even when the list is sorted. Type a title and press Enter to
+                create the task, or leave it empty to discard it. Type{' '}
                 <code>taken</code> to have the create refused, or{' '}
                 <code>offline</code> for a network error.
               </>

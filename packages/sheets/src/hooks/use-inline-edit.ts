@@ -53,11 +53,19 @@ export function useInlineEdit<T extends string>({
     }
   }, [isEditing]);
 
-  const beginEdit = useCallback(() => {
-    committedRef.current = false;
-    setDraft(value);
-    setIsEditing(true);
-  }, [value]);
+  /**
+   * Opens the editor on the value, or on `draft` instead, such as the key typed
+   * into a focused cell. Anything else passed in, like the click event from
+   * `onClick={beginEdit}`, is ignored.
+   */
+  const beginEdit = useCallback(
+    (draft?: T) => {
+      committedRef.current = false;
+      setDraft(typeof draft === 'string' ? draft : value);
+      setIsEditing(true);
+    },
+    [value],
+  );
 
   const commit = useCallback(async () => {
     if (committedRef.current) return;
@@ -128,6 +136,14 @@ export function useInlineEdit<T extends string>({
         setDraft(e.target.value as T),
       onKeyDown: handleKeyDown,
       onBlur: handleBlur,
+      // The caret goes after the text, so typing carries on from a typed first
+      // key in every browser, rather than landing in front of it.
+      // Number, email and date inputs have no caret to place: setting one throws.
+      onFocus: (e: FocusEvent<HTMLInputElement>) => {
+        if (e.currentTarget.selectionStart === null) return;
+        const end = e.currentTarget.value.length;
+        e.currentTarget.setSelectionRange(end, end);
+      },
       autoFocus: true,
     },
   };
