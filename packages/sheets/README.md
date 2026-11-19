@@ -1,6 +1,6 @@
 # @codemancers/sheets
 
-A spreadsheet-style data grid for React. It's built on [TanStack Table](https://tanstack.com/table/v8) and comes in two layers: headless hooks that add in-place editing, and ready-made components styled with Tailwind CSS v4.
+A spreadsheet-style data grid for React. It's built on [TanStack Table](https://tanstack.com/table/latest) and comes in two layers: headless hooks that add in-place editing, and ready-made components styled with Tailwind CSS v4.
 
 ![A sheet with a saved edit, and a refused one showing its reason](https://raw.githubusercontent.com/codemancers/sheets/main/docs/images/sheet.png)
 
@@ -8,7 +8,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 - **In-place editing:** click a cell, type, then Enter to save or Escape to cancel. Each cell shows its own status: unsaved, saving, saved or refused.
 - **Saving per row:** edits to one row can be batched into a single request. If the server refuses a field, the error appears on that field's cell.
 - **Validation** with any [Standard Schema](https://standardschema.dev) library (zod, Valibot, ArkType and others).
-- **Plain TanStack Table underneath:** columns are TanStack `ColumnDef`s, and `useSheet` takes every `useReactTable` option.
+- **Plain TanStack Table underneath:** columns are TanStack `ColumnDef`s, and `useSheet` takes every `useTable` option.
 - **Accessible:** screen readers see a real table, and sorting, resizing and editing all work from the keyboard.
 - **Adaptable:** theme tokens, translatable labels, and right-to-left layouts.
 
@@ -31,7 +31,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 
 ## Install
 
-You need React 19 and TanStack Table v8. The components also need Tailwind CSS v4. The hooks alone don't.
+You need React 19 and TanStack Table v9. The components also need Tailwind CSS v4. The hooks alone don't.
 
 ```sh
 pnpm add @codemancers/sheets @tanstack/react-table
@@ -58,21 +58,21 @@ This adds the components' classes and theme tokens to your Tailwind build.
 'use client';
 
 import { createColumnHelper } from '@tanstack/react-table';
-import { useSheet } from '@codemancers/sheets';
+import { useSheet, type SheetFeatures } from '@codemancers/sheets';
 import { Sheet, SheetTextCell } from '@codemancers/sheets/ui';
 
 type Task = { id: string; title: string; status: string; owner: string };
 
-const task = createColumnHelper<Task>();
+const task = createColumnHelper<SheetFeatures, Task>();
 
-const columns = [
+const columns = task.columns([
   task.accessor('title', { header: 'Title', size: 280 }),
   task.accessor('status', {
     header: 'Status',
     cell: ({ getValue }) => <SheetTextCell muted>{getValue()}</SheetTextCell>,
   }),
   task.accessor('owner', { header: 'Owner' }),
-];
+]);
 
 export function TaskSheet({ tasks }: { tasks: Task[] }) {
   const sheet = useSheet({
@@ -91,14 +91,17 @@ export function TaskSheet({ tasks }: { tasks: Task[] }) {
 
 How the pieces fit together:
 
-- `useSheet` is TanStack's `useReactTable` with a sheet's defaults. It returns `{ table, cellStatus, rowChanges }`.
+- `useSheet` is TanStack's `useTable` with a sheet's defaults and features. It returns `{ table, cellStatus, rowChanges }`.
+- `SheetFeatures` tells TanStack's types which features the table has. It is the first type argument wherever TanStack asks for one.
 - `<Sheet>` fills its parent and scrolls inside it, so give the parent a height.
 - `getRowId` sets each row's id. Always set it to your data's own id: editing state, highlighting and React keys all use the row id. TanStack's default is the row's position, which changes when rows are sorted or added.
 - Dark mode follows the operating system unless you add the one-line `@custom-variant dark` from [Install](#install).
 
 ## Columns and cells
 
-Columns are plain TanStack column definitions, and TanStack's [column docs](https://tanstack.com/table/v8/docs/guide/column-defs) apply as they are. `meta`, `size`/`minSize`/`maxSize`, `enableSorting`, `sortingFn`, `filterFn`, `header` functions and group columns all work. Define columns outside the component, or memoise them, as TanStack recommends.
+Columns are plain TanStack column definitions, and TanStack's [column docs](https://tanstack.com/table/latest/docs/guide/column-defs) apply as they are. `meta`, `size`/`minSize`/`maxSize`, `enableSorting`, `sortFn`, `filterFn`, `header` functions and group columns all work. Define columns outside the component, or memoise them, as TanStack recommends.
+
+Build the array with the helper's `columns()`, as above: it keeps each column's own value type, and TanStack's types reject a plain array of accessor columns. Without a column helper, type the array as `SheetColumnDef<Task>[]`.
 
 A column without a `cell` renders its value as padded text. For anything else, render one of the built-in cells or your own markup:
 
@@ -132,14 +135,14 @@ task.accessor('title', {
 **Grouped headers** span their columns:
 
 ```tsx
-const columns = [
+const columns = task.columns([
   task.group({
     id: 'task',
     header: 'Task',
-    columns: [task.accessor('title', { header: 'Title' }), task.accessor('status', { header: 'Status' })],
+    columns: task.columns([task.accessor('title', { header: 'Title' }), task.accessor('status', { header: 'Status' })]),
   }),
   task.accessor('owner', { header: () => <abbr title="Assigned to">Owner</abbr> }),
-];
+]);
 ```
 
 ## Sorting and filtering
@@ -151,7 +154,7 @@ Sorting and filtering run in the browser by default. Any column with an accessor
 ```tsx
 import { textFilter, valuesFilter } from '@codemancers/sheets';
 
-const columns = [task.accessor('title', { header: 'Title', filterFn: textFilter }), task.accessor('status', { header: 'Status', filterFn: valuesFilter })];
+const columns = task.columns([task.accessor('title', { header: 'Title', filterFn: textFilter }), task.accessor('status', { header: 'Status', filterFn: valuesFilter })]);
 ```
 
 - `textFilter` keeps the rows that contain the typed text, ignoring case.
@@ -168,9 +171,9 @@ Columns without one of these have no filter button. When the filters leave no ro
   task.accessor((row) => row.project?.name ?? '', { id: 'project', header: 'Project' });
   ```
 
-- For an order that isn't alphabetical, such as statuses in workflow order, give the column a `sortingFn`.
+- For an order that isn't alphabetical, such as statuses in workflow order, give the column a `sortFn`.
 
-**Server-side data.** Set TanStack's manual flags (`manualSorting`, `manualFiltering`) and control the state. The sheet then reports the sort and the filters, and your data layer applies them. With `manualFiltering`, a `valuesFilter` checklist lists the values in the rows you've loaded. To list every value from your server, with its count, pass TanStack's `getFacetedUniqueValues` option as `(table, columnId) => () => counts` (see TanStack's [server-side faceting](https://tanstack.com/table/v8/docs/guide/column-faceting#custom-server-side-faceting)). TanStack calls the outer function once per column and keeps the inner one, so have the inner one read your latest counts, from a ref for example, rather than capture them.
+**Server-side data.** Set TanStack's manual flags (`manualSorting`, `manualFiltering`) and control the state. The sheet then reports the sort and the filters, and your data layer applies them. With `manualFiltering`, a `valuesFilter` checklist lists the values in the rows you've loaded.
 
 ```tsx
 const [sorting, setSorting] = useState<SortingState>([]);
@@ -188,6 +191,20 @@ const sheet = useSheet({
 
 Any state you don't control (column widths, visibility, order) is managed by the table. Change handlers receive TanStack updaters, so a React state setter works as it is.
 
+With `manualFiltering`, a `valuesFilter` checklist lists the values in the rows you've loaded.
+
+### Feature set
+
+TanStack Table v9 only includes the features a table registers. A sheet registers sorting, column and global filtering, faceting, column sizing, resizing, visibility and ordering, and row pinning, and that set is fixed: TanStack types a table by its feature set, so the sheet's components can't take a table with another. Other TanStack features, such as row selection or pagination, aren't available yet.
+
+A column can name the sort and filter functions TanStack picks by itself: `'alphanumeric'`, `'text'`, `'datetime'` and `'basic'` to sort, and `'includesString'`, `'inNumberRange'`, `'inDateRange'`, `'equals'`, `'weakEquals'` and `'arrIncludes'` to filter. Pass any other function straight to the column:
+
+```tsx
+import { sortFn_textCaseSensitive } from '@tanstack/react-table';
+
+task.accessor('title', { header: 'Title', sortFn: sortFn_textCaseSensitive });
+```
+
 ## Editing and saving
 
 Editable cells validate a value, hand it on, and show the outcome on the cell itself rather than in a toast. A toast can't say _which_ cell it means.
@@ -202,7 +219,7 @@ Cells report to the sheet's `cellStatus`. `useSheet` creates one if you don't pa
 import { useCellStatus, useRowChanges, useSheet } from '@codemancers/sheets';
 import { Sheet, SheetEditableTextCell, SheetPrimaryCell } from '@codemancers/sheets/ui';
 
-const columns = [
+const columns = task.columns([
   task.accessor('title', {
     header: 'Title',
     cell: ({ row }) => <SheetPrimaryCell editable={{ value: row.original.title, schema: titleSchema }}>{row.original.title}</SheetPrimaryCell>,
@@ -211,7 +228,7 @@ const columns = [
     header: 'Owner',
     cell: ({ row }) => <SheetEditableTextCell value={row.original.owner} stage />,
   }),
-];
+]);
 
 function TaskSheet({ tasks }: { tasks: Task[] }) {
   const cellStatus = useCellStatus();
@@ -386,27 +403,28 @@ function TaskSheet({ tasks }: { tasks: Task[] }) {
   const [adding, setAdding] = useState(false);
 
   const columns = useMemo(
-    () => [
-      task.accessor('title', {
-        header: 'Title',
-        cell: ({ row }) =>
-          row.id === NEW_ROW ? (
-            <SheetEditableTextCell
-              value=""
-              placeholder="New task"
-              autoFocus
-              onCommit={async (title) => {
-                const result = await createTask(title); // { error } if refused
-                if (!result.error) setAdding(false);
-                return result;
-              }}
-              onCancel={() => setAdding(false)}
-            />
-          ) : (
-            <SheetPrimaryCell>{row.original.title}</SheetPrimaryCell>
-          ),
-      }),
-    ],
+    () =>
+      task.columns([
+        task.accessor('title', {
+          header: 'Title',
+          cell: ({ row }) =>
+            row.id === NEW_ROW ? (
+              <SheetEditableTextCell
+                value=""
+                placeholder="New task"
+                autoFocus
+                onCommit={async (title) => {
+                  const result = await createTask(title); // { error } if refused
+                  if (!result.error) setAdding(false);
+                  return result;
+                }}
+                onCancel={() => setAdding(false)}
+              />
+            ) : (
+              <SheetPrimaryCell>{row.original.title}</SheetPrimaryCell>
+            ),
+        }),
+      ]),
     [],
   );
 
@@ -436,25 +454,26 @@ The package doesn't draw drawers; use the drawer, side panel or dialog from your
 ```tsx
 import { useMemo } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
-import { useRowDrawer, useSheet } from '@codemancers/sheets';
+import { useRowDrawer, useSheet, type SheetFeatures } from '@codemancers/sheets';
 import { Sheet, SheetPrimaryCell } from '@codemancers/sheets/ui';
 
-const task = createColumnHelper<Task>();
+const task = createColumnHelper<SheetFeatures, Task>();
 
 function Tasks({ tasks }: { tasks: Task[] }) {
   const drawer = useRowDrawer();
   const { open } = drawer;
   const columns = useMemo(
-    () => [
-      task.accessor('title', {
-        header: 'Title',
-        cell: ({ row }) => (
-          <SheetPrimaryCell href={`/tasks?open=${row.id}`} onOpen={() => open(row.id)}>
-            {row.original.title}
-          </SheetPrimaryCell>
-        ),
-      }),
-    ],
+    () =>
+      task.columns([
+        task.accessor('title', {
+          header: 'Title',
+          cell: ({ row }) => (
+            <SheetPrimaryCell href={`/tasks?open=${row.id}`} onOpen={() => open(row.id)}>
+              {row.original.title}
+            </SheetPrimaryCell>
+          ),
+        }),
+      ]),
     [open],
   );
   const sheet = useSheet({ columns, data: tasks, getRowId: (t) => t.id });
@@ -618,24 +637,24 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 - **No column pinning,** and no arrow-key navigation between cells.
 - **Text editors only.** The built-in editors are for text; other types need your own cells (see [Your own editable cells](#your-own-editable-cells)).
 - **Two filters:** text, and a checklist of values. A range, such as dates, needs your own control, through TanStack's filter APIs.
-- **TanStack Table v8 only.**
+- **TanStack Table v9 only.** Use `@codemancers/sheets` 0.2 with TanStack Table v8.
 - **The error tooltip** on the very last row of a completely full sheet can extend past the bottom edge, and the sheet scrolls to show it.
 
 ## API reference
 
 ### `@codemancers/sheets`
 
-| Export                                     | What it is                                                                                                                                                                                                                                        |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `useSheet(options)`                        | `useReactTable` plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own.                                                                                     |
-| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                                         |
-| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                                                 |
-| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit(draft?)`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                             |
-| `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                                      |
-| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                                                |
-| `textFilter`, `valuesFilter`               | Filter functions for a column's `filterFn`: the text it contains, or one of a checklist of values. Either one gives the column's header a filter button.                                                                                          |
-| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                                                 |
-| Types                                      | `SheetInstance`, `UseSheetOptions`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `CellCommitResult`, `SheetCellValidator`, `StandardSchemaV1`. |
+| Export                                     | What it is                                                                                                                                                                                                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `useSheet(options)`                        | `useTable` with the sheet's feature set, plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own.                                                                                               |
+| `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                                                                            |
+| `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                                                                                    |
+| `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit(draft?)`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                                                                |
+| `useRowDrawer(options?)`                   | Which row is open in a drawer or panel: `openRowId`, `open`, `close`, `toggle`, `isOpen`. Options: `openRowId` and `onOpenRowIdChange` to control it, or `defaultOpenRowId`.                                                                                                         |
+| `useSheetCellEditing(schema?)`             | The editing context for a cell, for building your own (see above).                                                                                                                                                                                                                   |
+| `textFilter`, `valuesFilter`               | Filter functions for a column's `filterFn`: the text it contains, or one of a checklist of values. Either one gives the column's header a filter button.                                                                                                                             |
+| `SheetCellProvider`, `useSheetCellScope()` | The row, column and editing context a cell reads.                                                                                                                                                                                                                                    |
+| Types                                      | `SheetInstance`, `UseSheetOptions`, `SheetFeatures`, `SheetColumnDef`, `CellStatus`, `CellStatusState`, `RowChanges`, `RowChangesState`, `RowSubmitResult`, `RowFlushPolicy`, `RowDrawerState`, `UseRowDrawerOptions`, `CellCommitResult`, `SheetCellValidator`, `StandardSchemaV1`. |
 
 ### `@codemancers/sheets/ui`
 

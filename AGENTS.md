@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repository. [CONTRIBUTING.md](
 
 ## What this is
 
-`@codemancers/sheets` is a spreadsheet-style data grid for React, built on TanStack Table v8. It's one package with three entry points:
+`@codemancers/sheets` is a spreadsheet-style data grid for React, built on TanStack Table v9. It's one package with three entry points:
 
 | Import                           | Source (`packages/sheets/`)   | Contents                                                                                         |
 | -------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------ |
