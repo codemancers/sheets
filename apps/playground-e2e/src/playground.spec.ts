@@ -58,6 +58,31 @@ test.describe('sorting and row actions', () => {
       page.getByRole('dialog', { name: 'Draft the launch post' }),
     ).toBeVisible();
   });
+
+  test('resizes a column by dragging its edge', async ({ page }) => {
+    const header = demo(page, region).getByRole('columnheader', {
+      name: /Title/,
+    });
+    const handle = demo(page, region).getByRole('separator', {
+      name: 'Resize Title',
+    });
+    const cell = dataRow(page, region, 0).getByRole('cell').first();
+    const before = await header.boundingBox();
+    const box = await handle.boundingBox();
+    const x = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    const y = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y, { steps: 5 });
+    await page.mouse.up();
+
+    await expect(handle).toHaveAttribute('aria-valuenow', '360');
+    // The header and the rows follow the new width.
+    const width = (before?.width ?? 0) + 60;
+    expect((await header.boundingBox())?.width).toBeCloseTo(width, 0);
+    expect((await cell.boundingBox())?.width).toBeCloseTo(width, 0);
+  });
 });
 
 test.describe('inline editing', () => {
