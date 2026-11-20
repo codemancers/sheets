@@ -1,6 +1,11 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { memo, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { createColumnHelper } from '@tanstack/react-table';
+import {
+  createColumnHelper,
+  type ColumnSizingState,
+  type ColumnVisibilityState,
+} from '@tanstack/react-table';
 import { textFilter } from '../hooks/filters.js';
 import { useSheet, type SheetFeatures } from '../hooks/use-sheet.js';
 import { Sheet } from './sheet.js';
@@ -320,42 +325,35 @@ describe('Sheet', () => {
     });
   });
 
-  // TanStack's advice for live resizing: only the header and the column
-  // widths should change while a column is dragged.
   // Apps usually pass labels inline, a new object on every render. The merged
-  // labels must stay the same object, or everything that reads them, such as
-  // each row's number cell, re-renders on every frame of a drag.
-  it('keeps label readers still during a drag when labels are inline', () => {
+  // labels must stay the same object, or a memoised component that reads
+  // them re-renders whenever the app does.
+  it('keeps a memoised label reader still when labels are inline', () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<SheetFeatures, Task>();
     const labelReads = vi.fn();
-    function ReadsLabels() {
+    const ReadsLabels = memo(function ReadsLabels() {
       useSheetLabels();
       labelReads();
       return null;
-    }
+    });
     const columns = taskColumn.columns([
       taskColumn.accessor('title', {
         header: 'Title',
-        size: 200,
         cell: () => <ReadsLabels />,
       }),
     ]);
     const data = [{ id: '1', title: 'Alpha' }];
-    function DragSheet() {
+    function Labelled() {
       const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
       return <Sheet instance={sheet} labels={{ addRow: 'Add task' }} />;
     }
-    render(<DragSheet />);
-    const handle = screen.getByRole('separator', { name: 'Resize Title' });
-
-    fireEvent.mouseDown(handle, { clientX: 100 });
+    const { rerender } = render(<Labelled />);
     const before = labelReads.mock.calls.length;
-    fireEvent.mouseMove(document, { clientX: 140 });
-    fireEvent.mouseMove(document, { clientX: 180 });
+
+    rerender(<Labelled />);
 
     expect(labelReads.mock.calls.length).toBe(before);
-    fireEvent.mouseUp(document, { clientX: 180 });
   });
 
   it('updates its labels when their values change', () => {
@@ -418,9 +416,12 @@ describe('Sheet', () => {
     expect(beta.getAttribute('data-highlighted')).toBe('true');
   });
 
-  it('does not re-render the rows while a column is dragged', async () => {
+  // TanStack's advice for resizing: a drag re-renders only the handle, and
+  // the new widths go straight to the root's --sheet-columns.
+  it('does not re-render the sheet or its rows while a column is dragged', async () => {
     type Task = { id: string; title: string };
     const taskColumn = createColumnHelper<SheetFeatures, Task>();
+    const sheetRenders = vi.fn();
     const cellRenders = vi.fn();
     const columns = taskColumn.columns([
       taskColumn.accessor('title', {
@@ -434,6 +435,7 @@ describe('Sheet', () => {
     ]);
     const data = [{ id: '1', title: 'Alpha' }];
     function DragSheet() {
+      sheetRenders();
       const sheet = useSheet({ columns, data, getRowId: (task) => task.id });
       return <Sheet instance={sheet} />;
     }
@@ -442,16 +444,84 @@ describe('Sheet', () => {
     const root = screen.getByRole('table');
 
     fireEvent.mouseDown(handle, { clientX: 100 });
-    const before = cellRenders.mock.calls.length;
+    const sheetsBefore = sheetRenders.mock.calls.length;
+    const cellsBefore = cellRenders.mock.calls.length;
     fireEvent.mouseMove(document, { clientX: 140 });
     fireEvent.mouseMove(document, { clientX: 180 });
     await act(
       () => new Promise<void>((done) => requestAnimationFrame(() => done())),
     );
 
-    expect(root.style.getPropertyValue('--sheet-columns')).toContain('280px');
-    expect(cellRenders.mock.calls.length).toBe(before);
+    expect(root.style.getPropertyValue('--sheet-columns')).toBe(
+      '40px 280px 1fr',
+    );
+    expect(handle.getAttribute('aria-valuenow')).toBe('280');
+    expect(sheetRenders.mock.calls.length).toBe(sheetsBefore);
+    expect(cellRenders.mock.calls.length).toBe(cellsBefore);
 
     fireEvent.mouseUp(document, { clientX: 180 });
+  });
+
+  describe('when the app controls the state', () => {
+    type Task = { id: string; title: string; notes: string };
+    const taskColumn = createColumnHelper<SheetFeatures, Task>();
+    const columns = taskColumn.columns([
+      taskColumn.accessor('title', { header: 'Title', size: 200 }),
+      taskColumn.accessor('notes', { header: 'Notes', size: 300 }),
+    ]);
+    const data = [{ id: '1', title: 'Alpha', notes: 'First' }];
+
+    it('lays the columns out on the widths it holds', () => {
+      function Controlled() {
+        const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+        const sheet = useSheet({
+          columns,
+          data,
+          state: { columnSizing },
+          onColumnSizingChange: setColumnSizing,
+        });
+        return <Sheet instance={sheet} />;
+      }
+      render(<Controlled />);
+      const handle = screen.getByRole('separator', { name: 'Resize Title' });
+
+      fireEvent.keyDown(handle, { key: 'ArrowRight' });
+
+      expect(handle.getAttribute('aria-valuenow')).toBe('210');
+      expect(
+        screen.getByRole('table').style.getPropertyValue('--sheet-columns'),
+      ).toBe('40px 210px 300px 1fr');
+    });
+
+    it('lays the columns out on the ones it shows', () => {
+      function Controlled() {
+        const [columnVisibility, setColumnVisibility] =
+          useState<ColumnVisibilityState>({});
+        const sheet = useSheet({
+          columns,
+          data,
+          state: { columnVisibility },
+          onColumnVisibilityChange: setColumnVisibility,
+        });
+        return (
+          <>
+            <button
+              type="button"
+              onClick={() => setColumnVisibility({ title: false })}
+            >
+              Hide title
+            </button>
+            <Sheet instance={sheet} />
+          </>
+        );
+      }
+      render(<Controlled />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Hide title' }));
+
+      expect(
+        screen.getByRole('table').style.getPropertyValue('--sheet-columns'),
+      ).toBe('40px 300px 1fr');
+    });
   });
 });

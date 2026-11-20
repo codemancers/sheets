@@ -7,7 +7,12 @@ import {
   FunnelIcon,
 } from './icons.js';
 import { cx } from './cx.js';
-import { flexRender, type Header, type RowData } from '@tanstack/react-table';
+import {
+  flexRender,
+  Subscribe,
+  type Header,
+  type RowData,
+} from '@tanstack/react-table';
 import type { SheetFeatures } from '../hooks/use-sheet.js';
 import { useSheetLabels } from './labels.js';
 import { columnFilterKind, SheetColumnFilter } from './sheet-column-filter.js';
@@ -51,13 +56,14 @@ export function SheetColumn<TData extends RowData>({
   const sort = column.getIsSorted();
   const canSort = column.getCanSort();
   const filterKind = columnFilterKind(column);
-  const size = header.getSize();
+  const table = header.getContext().table;
   const minSize = column.columnDef.minSize ?? 0;
 
+  // The width when the key is pressed: resizing doesn't re-render this header.
   const resizeBy = (delta: number) =>
-    header.getContext().table.setColumnSizing((sizing) => ({
+    table.setColumnSizing((sizing) => ({
       ...sizing,
-      [column.id]: Math.max(minSize, size + delta),
+      [column.id]: Math.max(minSize, header.getSize() + delta),
     }));
 
   return (
@@ -115,36 +121,53 @@ export function SheetColumn<TData extends RowData>({
         </div>
       )}
       {isLeaf && column.getCanResize() && (
-        <div
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={labels.resize(label)}
-          aria-valuenow={size}
-          aria-valuemin={minSize}
-          aria-valuetext={labels.width(size)}
-          tabIndex={0}
-          onMouseDown={header.getResizeHandler()}
-          onTouchStart={header.getResizeHandler()}
-          onDoubleClick={() => column.resetSize()}
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-            event.preventDefault();
-            // The arrow pointing away from the column widens it, so the
-            // keys flip in right-to-left layouts.
-            const widen =
-              header.getContext().table.options.columnResizeDirection === 'rtl'
-                ? 'ArrowLeft'
-                : 'ArrowRight';
-            const step = event.shiftKey ? RESIZE_STEP * 5 : RESIZE_STEP;
-            resizeBy(event.key === widen ? step : -step);
+        // Only the handle follows a resize, for its width and highlight:
+        // TanStack's advice for resizing. A header's `table` is the core
+        // table, so this is the standalone `Subscribe`.
+        <Subscribe
+          source={table.store}
+          selector={(state) => ({
+            width: state.columnSizing[column.id],
+            resizing: state.columnResizing.isResizingColumn === column.id,
+          })}
+        >
+          {({ resizing }) => {
+            const size = header.getSize();
+            return (
+              <div
+                role="separator"
+                aria-orientation="vertical"
+                aria-label={labels.resize(label)}
+                aria-valuenow={size}
+                aria-valuemin={minSize}
+                aria-valuetext={labels.width(size)}
+                tabIndex={0}
+                onMouseDown={header.getResizeHandler()}
+                onTouchStart={header.getResizeHandler()}
+                onDoubleClick={() => column.resetSize()}
+                onKeyDown={(event) => {
+                  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')
+                    return;
+                  event.preventDefault();
+                  // The arrow pointing away from the column widens it, so
+                  // the keys flip in right-to-left layouts.
+                  const widen =
+                    table.options.columnResizeDirection === 'rtl'
+                      ? 'ArrowLeft'
+                      : 'ArrowRight';
+                  const step = event.shiftKey ? RESIZE_STEP * 5 : RESIZE_STEP;
+                  resizeBy(event.key === widen ? step : -step);
+                }}
+                className={cx(
+                  'absolute top-0 end-0 h-full w-1 cursor-col-resize touch-none outline-none select-none focus-visible:bg-sheet-accent',
+                  resizing
+                    ? 'bg-sheet-accent'
+                    : 'hover:bg-sheet-fg/20 dark:hover:bg-sheet-fg-dark/20',
+                )}
+              />
+            );
           }}
-          className={cx(
-            'absolute top-0 end-0 h-full w-1 cursor-col-resize touch-none outline-none select-none focus-visible:bg-sheet-accent',
-            column.getIsResizing()
-              ? 'bg-sheet-accent'
-              : 'hover:bg-sheet-fg/20 dark:hover:bg-sheet-fg-dark/20',
-          )}
-        />
+        </Subscribe>
       )}
     </div>
   );

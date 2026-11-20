@@ -46,12 +46,33 @@ describe('useSheet', () => {
     expect(names(result)).toEqual(['b', 'a']);
   });
 
-  it('resizes columns without the app controlling sizing', () => {
-    const { result } = renderHook(() => useSheet({ columns, data }));
+  it('resizes columns without the app controlling sizing or re-rendering', () => {
+    const renders = vi.fn();
+    const { result } = renderHook(() => {
+      renders();
+      return useSheet({ columns, data });
+    });
+    const before = renders.mock.calls.length;
 
     act(() => result.current.table.setColumnSizing({ name: 240 }));
 
+    expect(renders.mock.calls.length).toBe(before);
+    expect(result.current.table.atoms.columnSizing.get()).toEqual({
+      name: 240,
+    });
     expect(result.current.table.getColumn('name')?.getSize()).toBe(240);
+  });
+
+  it('keeps every state slice but the column widths in table.state', () => {
+    const { result } = renderHook(() => useSheet({ columns, data }));
+    const { table } = result.current;
+    const resizing = ['columnSizing', 'columnResizing'];
+
+    expect(Object.keys(table.state).sort()).toEqual(
+      Object.keys(table.atoms)
+        .filter((key) => !resizing.includes(key))
+        .sort(),
+    );
   });
 
   it("counts a column's values, for its filter", () => {
