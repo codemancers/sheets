@@ -49,5 +49,5 @@ export function LargeDemo() {
     data: TASKS,
     getRowId: (task) => task.id,
   });
-  return <Sheet instance={sheet} />;
+  return <Sheet instance={sheet} enableColumnOrdering />;
 }

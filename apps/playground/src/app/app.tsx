@@ -206,7 +206,7 @@ function App() {
           <Demo
             id="sorting"
             title="Sorting and row actions"
-            description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Click a title, or hover a row for its open icon, to open it in a drawer (useRowDrawer); Escape closes it."
+            description="Server-side sorting (manualSorting): the sheet reports the sort and the app applies it. Click a title, or hover a row for its open icon, to open it in a drawer (useRowDrawer); Escape closes it. Drag a header's grip, or click it, to move a column (enableColumnOrdering); Title stays first."
           >
             <SortingDemo />
           </Demo>
@@ -250,7 +250,7 @@ function App() {
           <Demo
             id="large"
             title="1,000 rows"
-            description="Sorted and filtered in the browser, the default: filter Title by its text, and Status and Owner by their values. Grouped headers, and a header that renders markup. No virtualization yet, so every row is rendered."
+            description="Sorted and filtered in the browser, the default: filter Title by its text, and Status and Owner by their values. Grouped headers, and a header that renders markup; columns move within their group. No virtualization yet, so every row is rendered."
           >
             <LargeDemo />
           </Demo>

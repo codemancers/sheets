@@ -7,6 +7,7 @@ import {
   FunnelIcon,
 } from './icons.js';
 import { cx } from './cx.js';
+import { useContext, useState, type DragEvent } from 'react';
 import {
   flexRender,
   Subscribe,
@@ -14,24 +15,52 @@ import {
   type RowData,
 } from '@tanstack/react-table';
 import type { SheetFeatures } from '../hooks/use-sheet.js';
+import {
+  canDropOn,
+  columnLabel,
+  moveTargets,
+  type MoveSide,
+} from './column-order.js';
 import { useSheetLabels } from './labels.js';
 import { columnFilterKind, SheetColumnFilter } from './sheet-column-filter.js';
+import {
+  DraggedColumnContext,
+  SheetColumnMove,
+  useMoveColumn,
+} from './sheet-column-move.js';
 
 /** Pixels per arrow key on the resize handle; Shift moves five steps. */
 const RESIZE_STEP = 10;
+
+/**
+ * Before or after the header under the pointer: the half nearer the start of
+ * the line, which is the right half when right to left, means before.
+ */
+function dropSide(event: DragEvent<HTMLElement>): MoveSide {
+  const box = event.currentTarget.getBoundingClientRect();
+  const leftHalf = event.clientX < box.left + box.width / 2;
+  const rtl = getComputedStyle(event.currentTarget).direction === 'rtl';
+  return leftHalf !== rtl ? 'before' : 'after';
+}
 
 export type SheetColumnProps<TData extends RowData> = {
   header: Header<SheetFeatures, TData, unknown>;
   isFirstCol?: boolean;
   className?: string;
+  /** Gives the column a move handle, and takes other columns dropped on it. */
+  enableColumnOrdering?: boolean;
 };
 
 export function SheetColumn<TData extends RowData>({
   header,
   isFirstCol,
   className,
+  enableColumnOrdering = false,
 }: SheetColumnProps<TData>) {
   const labels = useSheetLabels();
+  const dragged = useContext(DraggedColumnContext);
+  const move = useMoveColumn();
+  const [drop, setDrop] = useState<MoveSide | null>(null);
   const column = header.column;
   // Group headers span their leaf columns; empty slots above a leaf column
   // that has no group (placeholders) render as blank header space.
@@ -46,11 +75,7 @@ export function SheetColumn<TData extends RowData>({
     return <div aria-hidden="true" style={span} className={borders} />;
   }
 
-  // For names like "Sort Title": the header itself may render anything.
-  const label =
-    typeof column.columnDef.header === 'string'
-      ? column.columnDef.header
-      : column.id;
+  const label = columnLabel(column);
   const isLeaf = header.subHeaders.length === 0;
 
   const sort = column.getIsSorted();
@@ -58,6 +83,16 @@ export function SheetColumn<TData extends RowData>({
   const filterKind = columnFilterKind(column);
   const table = header.getContext().table;
   const minSize = column.columnDef.minSize ?? 0;
+
+  const targets =
+    enableColumnOrdering && isLeaf ? moveTargets(table, column) : {};
+  const canMove = Boolean(targets.before || targets.after);
+  // The column being dragged, when it can land next to this one.
+  const draggedHere = () => {
+    const id = enableColumnOrdering ? dragged.current : null;
+    const from = id ? table.getColumn(id) : undefined;
+    return from && canDropOn(table, from, column) ? from : undefined;
+  };
 
   // The width when the key is pressed: resizing doesn't re-render this header.
   const resizeBy = (delta: number) =>
@@ -79,6 +114,24 @@ export function SheetColumn<TData extends RowData>({
               ? 'none'
               : undefined
       }
+      onDragOver={(event) => {
+        if (!draggedHere()) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setDrop(dropSide(event));
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setDrop(null);
+      }}
+      onDrop={(event) => {
+        const from = draggedHere();
+        if (!from) return;
+        // Moved on drop, not when the drag ends, so Escape moves nothing.
+        event.preventDefault();
+        setDrop(null);
+        move(table, from, column, dropSide(event));
+      }}
       className={cx(
         'group relative flex items-center justify-between px-2 py-1.5 text-xs font-medium text-sheet-muted select-none dark:text-sheet-muted-dark',
         borders,
@@ -99,7 +152,16 @@ export function SheetColumn<TData extends RowData>({
           </>
         )}
       </div>
-      {(canSort || filterKind) && (
+      {drop && (
+        <span
+          aria-hidden="true"
+          className={cx(
+            'pointer-events-none absolute inset-y-0 z-10 w-0.5 bg-sheet-accent',
+            drop === 'before' ? 'start-0' : 'end-0',
+          )}
+        />
+      )}
+      {(canSort || filterKind || canMove) && (
         <div className="flex shrink-0 items-center gap-1">
           {canSort && (
             <button
@@ -118,6 +180,7 @@ export function SheetColumn<TData extends RowData>({
               label={label}
             />
           )}
+          {canMove && <SheetColumnMove header={header} targets={targets} />}
         </div>
       )}
       {isLeaf && column.getCanResize() && (

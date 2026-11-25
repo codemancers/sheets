@@ -25,6 +25,8 @@ export function taskColumns(
     task.accessor('title', {
       header: 'Title',
       size: 300,
+      // Stays first where columns can be moved.
+      meta: { enableColumnOrdering: false },
       cell: ({ row }) =>
         newRow && row.id === newRow.id ? (
           <SheetEditableTextCell
