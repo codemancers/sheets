@@ -88,6 +88,22 @@ When you make a choice that a future contributor would question, add it here.
 - **Translatable text.** The sheet's own strings come from the `labels` prop, which has English defaults. Cells and hooks take their text as props or options.
 - **Right-to-left.** Logical classes such as `border-e` and `ps-2` mirror the layout under `dir="rtl"`, and TanStack's `columnResizeDirection` makes resizing and the arrow keys match.
 
+## Moving columns
+
+TanStack's [column ordering guide](https://tanstack.com/table/latest/docs/framework/react/guide/column-ordering) covers the state (`columnOrder`, `setColumnOrder`) and suggests the browser's own drag events for no dependencies, with Material React Table as the example. It says nothing about the choices below, so each one names where it comes from.
+
+- **Off by default** (ours). Existing sheets don't gain a handle in every header until an app asks with `enableColumnOrdering`. Material React Table is off by default too; MUI X and AG Grid are on.
+- **A column opts out through `meta`.** TanStack has no ordering flag, and `meta` is its place for custom column options. The sheet reads the key without typing `meta` (ours). Typing it through the sheet's feature set with `metaHelper`, TanStack v9's per-table way, stopped apps' `meta` values typed with an interface from compiling, so the key isn't type-checked; apps that type `meta` themselves add it. Material React Table, MUI X (`disableReorder`) and AG Grid (`suppressMovable`, `lockPosition`) all opt out per column. Nothing is fixed by default: apps already on the sheet have data columns without an accessor, so "no accessor" couldn't mean "fixed".
+- **Fixed columns stay put, and others move around them** (ours). AG Grid's `lockPosition` is the nearest, but it only pins a column to an edge.
+- **A column stays in its group.** This is MUI X's default (`freeReordering` off). AG Grid and TanStack split a group instead. A column outside a group steps over a whole group (ours). It only limits moves made in the sheet: an order an app sets can still split a group.
+- **A menu, not plain arrow keys.** WCAG 2.2's [dragging movements](https://www.w3.org/TR/WCAG22/#dragging-movements) needs a way to move without dragging, with one pointer. [F108](https://www.w3.org/WAI/WCAG22/Techniques/failures/F108)'s first example is a list that only reorders by dragging. Chrome's [drag-and-drop guide](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/drag-and-drop) calls movement controls or an actions menu the best default for screen readers, which take plain arrow keys for themselves. Atlassian's [guidelines](https://atlassian.design/components/pragmatic-drag-and-drop/accessibility-guidelines) turn the drag handle into the menu's button when moving is the only action; a header also sorts and filters, so this is adapted from them.
+- **Left and right follow the screen.** Right to left, "Move left" moves the column later in the order. Chrome's guide and MUI X do the same.
+- **The menu closes after each move.** It's a native popover inside the header, and a popover is hidden without a `toggle` event when React moves its header node, which the spike showed. Closing it first keeps React's state right, and focus goes back to the grip.
+- **Moved on drop, not when the drag ends,** so Escape moves nothing (ours). Material React Table moves on drag end.
+- **One live region per sheet, beside the table.** The table may hold only rows, and a region in each header would put the message in the header's name. The message waits half a second, as Chrome's guide advises, so the focus returning to the grip doesn't talk over it.
+- **The look:** a grip that shows on hover or focus, and always on touch screens, where the menu is the way to move. A 24 px target, per WCAG 2.2's [target size](https://www.w3.org/TR/WCAG22/#target-size-minimum). A 2 px line marks where the column will land, as in Atlassian's [design guidelines](https://atlassian.design/components/pragmatic-drag-and-drop/design-guidelines), in `sheet-accent`.
+- **Scrolling at the edge is left to the browser.** Chromium scrolls the sheet during a drag; Firefox and WebKit didn't in Playwright. The menu reaches every column either way.
+
 ## Styling
 
 - **Theme tokens.** Every colour comes from a `--color-sheet-*` token, declared with Tailwind's `@theme`. An app restyles the sheet by redefining tokens, or maps them to its design system's variables with `@theme inline`. The defaults keep the original look.
