@@ -2,6 +2,8 @@
 
 import { cx } from './cx.js';
 import {
+  useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   type CSSProperties,
@@ -13,6 +15,7 @@ import { SheetAddRow } from './sheet-add-row.js';
 import { SheetEmpty } from './sheet-empty.js';
 import { SheetLoading } from './sheet-loading.js';
 import { SheetHeader } from './sheet-header.js';
+import { AnnounceContext } from './sheet-column-move.js';
 import { SheetRow } from './sheet-row.js';
 import {
   defaultSheetLabels,
@@ -73,6 +76,13 @@ export type SheetProps<TData extends RowData> = {
   openRowId?: string | null;
   /** Replaces any of the text the sheet renders itself, e.g. to translate it. */
   labels?: Partial<SheetLabels>;
+  /**
+   * Lets people move columns: by dragging a header's handle onto another
+   * header, or from the menu the handle opens. A column with
+   * `meta: { enableColumnOrdering: false }` stays where it is, and a column
+   * in a group stays in its group. The order is TanStack's `columnOrder`.
+   */
+  enableColumnOrdering?: boolean;
 };
 
 export function Sheet<TData extends RowData>({
@@ -87,6 +97,7 @@ export function Sheet<TData extends RowData>({
   highlightedRowId,
   openRowId,
   labels,
+  enableColumnOrdering,
 }: SheetProps<TData>) {
   const { table, cellStatus, rowChanges } = instance;
   // Apps usually pass labels inline, a new object on every render. Keep the
@@ -106,6 +117,22 @@ export function Sheet<TData extends RowData>({
     };
   }
   const text = labelsRef.current.merged;
+
+  // Where a moved column went, for screen readers. Written straight to the
+  // live region, after a short wait so the focus returning to the move
+  // handle doesn't talk over it, as Chrome's drag-and-drop guide advises.
+  const live = useRef<HTMLDivElement>(null);
+  const announcing = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const announce = useCallback((message: () => string) => {
+    const region = live.current;
+    if (!region) return;
+    region.textContent = '';
+    clearTimeout(announcing.current);
+    announcing.current = setTimeout(() => {
+      region.textContent = message();
+    }, 500);
+  }, []);
+  useEffect(() => () => clearTimeout(announcing.current), []);
 
   // TanStack's advice for resizing: a drag changes no state the sheet renders
   // from (see useSheet), so the new widths go straight to the root's
@@ -136,66 +163,75 @@ export function Sheet<TData extends RowData>({
 
   return (
     <SheetLabelsProvider value={text}>
-      <div
-        ref={rootRef}
-        role="table"
-        style={columns}
-        className={cx(
-          'flex h-full w-full flex-col overflow-auto bg-sheet-bg text-sm text-sheet-fg dark:bg-sheet-bg-dark dark:text-sheet-fg-dark',
-          className,
-        )}
-      >
-        <SheetHeader table={table} />
+      <AnnounceContext.Provider value={announce}>
         <div
-          role="rowgroup"
-          aria-busy={isLoading || undefined}
-          className="flex flex-col"
+          ref={rootRef}
+          role="table"
+          style={columns}
+          className={cx(
+            'flex h-full w-full flex-col overflow-auto bg-sheet-bg text-sm text-sheet-fg dark:bg-sheet-bg-dark dark:text-sheet-fg-dark',
+            className,
+          )}
         >
-          {isLoading ? (
-            (loadingState ?? (
-              <SheetLoading
-                columnCount={table.getVisibleLeafColumns().length}
-                rowHeight={rowHeight}
-              />
-            ))
-          ) : rows.length === 0 ? (
-            <SheetEmpty>
-              {/* `emptyState` means there's no data. Here there is, but the
+          <SheetHeader
+            table={table}
+            enableColumnOrdering={enableColumnOrdering}
+          />
+          <div
+            role="rowgroup"
+            aria-busy={isLoading || undefined}
+            className="flex flex-col"
+          >
+            {isLoading ? (
+              (loadingState ?? (
+                <SheetLoading
+                  columnCount={table.getVisibleLeafColumns().length}
+                  rowHeight={rowHeight}
+                />
+              ))
+            ) : rows.length === 0 ? (
+              <SheetEmpty>
+                {/* `emptyState` means there's no data. Here there is, but the
                   filters hide all of it. */}
-              {table.state.columnFilters.length > 0 ? (
-                <>
-                  {text.noMatches}{' '}
-                  <button
-                    type="button"
-                    onClick={() => table.setColumnFilters([])}
-                    className="text-sheet-link hover:text-sheet-link-hover dark:text-sheet-link-dark dark:hover:text-sheet-link-hover-dark"
-                  >
-                    {text.clearFilters}
-                  </button>
-                </>
-              ) : (
-                emptyState
-              )}
-            </SheetEmpty>
-          ) : (
-            rows.map((row, idx) => (
-              <SheetRow
-                key={row.id}
-                row={row}
-                rowIndex={idx}
-                rowHeight={rowHeight}
-                highlight={highlightedRowId === row.id}
-                open={openRowId === row.id}
-                cellStatus={cellStatus}
-                rowChanges={rowChanges}
-              />
-            ))
+                {table.state.columnFilters.length > 0 ? (
+                  <>
+                    {text.noMatches}{' '}
+                    <button
+                      type="button"
+                      onClick={() => table.setColumnFilters([])}
+                      className="text-sheet-link hover:text-sheet-link-hover dark:text-sheet-link-dark dark:hover:text-sheet-link-hover-dark"
+                    >
+                      {text.clearFilters}
+                    </button>
+                  </>
+                ) : (
+                  emptyState
+                )}
+              </SheetEmpty>
+            ) : (
+              rows.map((row, idx) => (
+                <SheetRow
+                  key={row.id}
+                  row={row}
+                  rowIndex={idx}
+                  rowHeight={rowHeight}
+                  highlight={highlightedRowId === row.id}
+                  open={openRowId === row.id}
+                  cellStatus={cellStatus}
+                  rowChanges={rowChanges}
+                />
+              ))
+            )}
+          </div>
+          {!isLoading && onAddRow && (
+            <SheetAddRow onClick={onAddRow} disabled={addRowDisabled} />
           )}
         </div>
-        {!isLoading && onAddRow && (
-          <SheetAddRow onClick={onAddRow} disabled={addRowDisabled} />
+        {/* Beside the table, which may hold only rows. */}
+        {enableColumnOrdering && (
+          <div ref={live} role="status" className="sr-only" />
         )}
-      </div>
+      </AnnounceContext.Provider>
     </SheetLabelsProvider>
   );
 }

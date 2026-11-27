@@ -33,7 +33,11 @@ export function SortingDemo() {
 
   return (
     <>
-      <Sheet instance={sheet} openRowId={drawer.openRowId} />
+      <Sheet
+        instance={sheet}
+        openRowId={drawer.openRowId}
+        enableColumnOrdering
+      />
       <TaskDrawer
         task={TASKS.find((task) => task.id === drawer.openRowId)}
         onClose={drawer.close}

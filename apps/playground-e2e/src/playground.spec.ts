@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 const demo = (page: Page, name: string) => page.getByRole('region', { name });
 const dataRow = (page: Page, region: string, index: number) =>
@@ -259,6 +259,242 @@ test.describe('full screen', () => {
     await page.goto('/?full=large');
     const box = await demo(page, '1,000 rows').getByRole('table').boundingBox();
     expect(box?.width).toBe(page.viewportSize()?.width);
+  });
+});
+
+test.describe('reordering columns', () => {
+  const sorting = 'Sorting and row actions';
+  const large = '1,000 rows';
+  /** The header texts in one header row, without the row-number column. */
+  const headers = async (page: Page, region: string, row = 0) =>
+    (
+      await demo(page, region)
+        .getByRole('row')
+        .nth(row)
+        .getByRole('columnheader')
+        .allTextContents()
+    ).filter((text) => text && text !== 'Row');
+  const handle = (page: Page, region: string, column: string) =>
+    demo(page, region).getByRole('button', {
+      name: `Move ${column}`,
+      exact: true,
+    });
+
+  test('drags a column onto another header', async ({ page }) => {
+    const target = demo(page, sorting).getByRole('columnheader', {
+      name: /Status/,
+    });
+    const box = await target.boundingBox();
+    // Onto the left half of Status: before it.
+    await handle(page, sorting, 'Owner').dragTo(target, {
+      targetPosition: { x: (box?.width ?? 0) / 4, y: (box?.height ?? 0) / 2 },
+    });
+
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Status',
+      'Due',
+    ]);
+  });
+
+  /** Drags a grip onto a header, `at` across it (0 is its left edge). */
+  const drag = async (
+    page: Page,
+    from: Locator,
+    to: Locator,
+    at: number,
+    escape = false,
+  ) => {
+    const [grip, box] = await Promise.all([
+      from.boundingBox(),
+      to.boundingBox(),
+    ]);
+    if (!grip || !box) throw new Error('Nothing to drag');
+    const x = box.x + box.width * at;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(x, y, { steps: 8 });
+    if (escape) await page.keyboard.press('Escape');
+    await page.mouse.move(x + 2, y, { steps: 2 });
+    await page.mouse.up();
+  };
+  const header = (page: Page, region: string, name: RegExp) =>
+    demo(page, region).getByRole('columnheader', { name });
+
+  test('drags a column to the right, then refuses one from another sheet', async ({
+    page,
+  }) => {
+    // Tall enough to show both sheets, so nothing scrolls mid-drag.
+    await page.setViewportSize({ width: 1280, height: 2400 });
+    // Onto the right half of Owner: after it. Status's own header moves.
+    await drag(
+      page,
+      handle(page, sorting, 'Status'),
+      header(page, sorting, /Owner/),
+      0.75,
+    );
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Status',
+      'Due',
+    ]);
+
+    await drag(
+      page,
+      handle(page, large, 'Owner'),
+      header(page, sorting, /Due/),
+      0.25,
+    );
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Status',
+      'Due',
+    ]);
+    expect(await headers(page, large, 1)).toEqual([
+      'Title',
+      'Status',
+      'Owner',
+      'Due',
+    ]);
+  });
+
+  test('Escape cancels a drag', async ({ page }) => {
+    const owner = handle(page, sorting, 'Owner');
+    const status = header(page, sorting, /Status/);
+
+    await drag(page, owner, status, 0.25, true);
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Status',
+      'Owner',
+      'Due',
+    ]);
+
+    // The same steps without Escape do move it.
+    await drag(page, owner, status, 0.25);
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Status',
+      'Due',
+    ]);
+  });
+
+  test('drops by the half on screen, right to left', async ({ page }) => {
+    await page.getByRole('button', { name: 'Right to left' }).click();
+    // Right to left, the left half of Due is its end: after it.
+    await drag(
+      page,
+      handle(page, sorting, 'Status'),
+      header(page, sorting, /Due/),
+      0.25,
+    );
+
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Due',
+      'Status',
+    ]);
+  });
+
+  test('moves a column from its menu, keeping focus', async ({ page }) => {
+    const due = handle(page, sorting, 'Due');
+    await due.focus();
+    await page.keyboard.press('Enter');
+    const menu = page.getByRole('dialog', { name: 'Move Due' });
+    await expect(menu.getByRole('button', { name: 'Move left' })).toBeFocused();
+    await expect(
+      menu.getByRole('button', { name: 'Move right' }),
+    ).toBeDisabled();
+
+    await page.keyboard.press('Enter');
+
+    await expect(menu).toBeHidden();
+    await expect(due).toBeFocused();
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Status',
+      'Due',
+      'Owner',
+    ]);
+    await expect(demo(page, sorting).getByRole('status')).toHaveText(
+      'Due moved to column 3 of 4',
+    );
+  });
+
+  test('keeps a fixed column first', async ({ page }) => {
+    await expect(handle(page, sorting, 'Title')).toHaveCount(0);
+    await handle(page, sorting, 'Status').click();
+
+    await expect(
+      page
+        .getByRole('dialog', { name: 'Move Status' })
+        .getByRole('button', { name: 'Move left' }),
+    ).toBeDisabled();
+  });
+
+  test('moves a column within its group', async ({ page }) => {
+    await handle(page, large, 'Title').click();
+    const menu = page.getByRole('dialog', { name: 'Move Title' });
+    await expect(
+      menu.getByRole('button', { name: 'Move left' }),
+    ).toBeDisabled();
+    await menu.getByRole('button', { name: 'Move right' }).click();
+
+    expect(await headers(page, large, 0)).toEqual(['Task', 'Assignment']);
+    expect(await headers(page, large, 1)).toEqual([
+      'Status',
+      'Title',
+      'Owner',
+      'Due',
+    ]);
+  });
+
+  test('moves left and right on screen, right to left', async ({ page }) => {
+    await page.getByRole('button', { name: 'Right to left' }).click();
+    await handle(page, sorting, 'Status').click();
+    // Right to left, Owner is to the left of Status.
+    await page
+      .getByRole('dialog', { name: 'Move Status' })
+      .getByRole('button', { name: 'Move left' })
+      .click();
+
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Owner',
+      'Status',
+      'Due',
+    ]);
+  });
+
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true, isMobile: true });
+
+    test('shows the grip without a hover', async ({ page, browserName }) => {
+      test.skip(browserName === 'firefox', 'Firefox has no mobile emulation');
+      await expect(handle(page, sorting, 'Owner')).toHaveCSS('opacity', '1');
+    });
+  });
+
+  test('gives the handle a target of at least 24 pixels', async ({ page }) => {
+    const header = demo(page, sorting).getByRole('columnheader', {
+      name: /Owner/,
+    });
+    const [box, cell] = await Promise.all([
+      handle(page, sorting, 'Owner').boundingBox(),
+      header.boundingBox(),
+    ]);
+
+    expect(box?.width).toBeGreaterThanOrEqual(24);
+    expect(box?.height).toBeGreaterThanOrEqual(24);
+    expect(box && cell && box.x + box.width).toBeLessThanOrEqual(
+      (cell?.x ?? 0) + (cell?.width ?? 0),
+    );
   });
 });
 

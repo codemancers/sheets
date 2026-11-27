@@ -20,6 +20,7 @@ A spreadsheet-style data grid for React. It's built on [TanStack Table](https://
 - [Sorting and filtering](#sorting-and-filtering)
 - [Editing and saving](#editing-and-saving)
 - [Layout and states](#layout-and-states)
+- [Reordering columns](#reordering-columns)
 - [Adding rows](#adding-rows)
 - [Opening rows in a drawer](#opening-rows-in-a-drawer)
 - [Customising](#customising)
@@ -394,6 +395,24 @@ useEffect(() => {
 <Sheet instance={sheet} onAddRow={() => setHighlightedRowId(addTask().id)} highlightedRowId={highlightedRowId} />;
 ```
 
+## Reordering columns
+
+`enableColumnOrdering` lets people move columns. Each header gets a grip, shown on hover or focus, and always on touch screens:
+
+- **Drag** the grip onto another header. The column lands before or after it, by the half it's dropped on, and a line shows where. Escape cancels.
+- **Click** the grip, or press Enter on it, for a menu that moves the column one place left or right. It works from the keyboard, on touch screens and with screen readers. Focus stays on the grip, and the column's new position is announced.
+
+```tsx
+<Sheet instance={sheet} enableColumnOrdering />
+```
+
+- **Columns that stay put:** give a column `meta: { enableColumnOrdering: false }`, such as an actions column, or one that should stay first. It gets no grip, and other columns move around it. Nothing is fixed on its own, so mark your actions columns.
+- **Groups:** a column stays in its group. A column outside a group moves past a whole group, and can be dropped on a group's header.
+- **Hidden columns** keep their places.
+- **The order** is TanStack's `columnOrder` state. Start from a saved order with `initialState: { columnOrder }`, or own it as TanStack's [column ordering guide](https://tanstack.com/table/latest/docs/framework/react/guide/column-ordering) shows: with an external atom in `atoms`, or with `state` and `onColumnOrderChange`. A saved order may be older than your columns: TanStack skips ids it doesn't know, and puts columns that aren't in the order last.
+
+`meta` is TanStack's column `meta`, so it holds your own keys too. If you type `meta` with TanStack's `ColumnMeta`, add `enableColumnOrdering?: boolean` to it.
+
 ## Adding rows
 
 `onAddRow` shows the add-row button. To create a record from a new row in the sheet, add a temporary row to `data`, and give its first cell an editor:
@@ -552,22 +571,25 @@ To follow your design system's CSS variables, such as shadcn's, use `@theme inli
 
 `<Sheet labels={…}>` replaces any of the text the sheet renders itself:
 
-| Label                        | Default                                       | Used for                                     |
-| ---------------------------- | --------------------------------------------- | -------------------------------------------- |
-| `rowNumber`                  | `Row`                                         | The name of the row-number column            |
-| `sort(column)`               | `Sort {column}`                               | Header sort buttons                          |
-| `resize(column)`             | `Resize {column}`                             | Resize handles                               |
-| `width(pixels)`              | `{pixels} pixels`                             | A resize handle's current width, read out    |
-| `filtered`                   | `(filtered)`                                  | Announced on a filtered column               |
-| `filter(column)`             | `Filter {column}`                             | Header filter buttons, and their filters     |
-| `filterText(column)`         | `{column} contains`                           | A text filter's input                        |
-| `blank`                      | `(Blank)`                                     | An empty value in a filter's checklist       |
-| `clearFilter`                | `Clear`                                       | Clears one column's filter                   |
-| `noMatches`, `clearFilters`  | `No rows match the filters.`, `Clear filters` | The state when the filters leave no rows     |
-| `unsaved`, `saving`, `saved` | `Unsaved`, `Saving`, `Saved`                  | Cell statuses, announced                     |
-| `saveFailed`                 | `Could not save. Check your connection.`      | A cell's error when its `onCommit` throws    |
-| `empty`                      | `No data.`                                    | The empty state, when `emptyState` isn't set |
-| `addRow`                     | `Add row`                                     | The add-row button                           |
+| Label                            | Default                                          | Used for                                     |
+| -------------------------------- | ------------------------------------------------ | -------------------------------------------- |
+| `rowNumber`                      | `Row`                                            | The name of the row-number column            |
+| `sort(column)`                   | `Sort {column}`                                  | Header sort buttons                          |
+| `resize(column)`                 | `Resize {column}`                                | Resize handles                               |
+| `width(pixels)`                  | `{pixels} pixels`                                | A resize handle's current width, read out    |
+| `move(column)`                   | `Move {column}`                                  | Header move grips, and their menus           |
+| `moveLeft`, `moveRight`          | `Move left`, `Move right`                        | The move menu's items                        |
+| `moved(column, position, total)` | `{column} moved to column {position} of {total}` | Announced after a column moves               |
+| `filtered`                       | `(filtered)`                                     | Announced on a filtered column               |
+| `filter(column)`                 | `Filter {column}`                                | Header filter buttons, and their filters     |
+| `filterText(column)`             | `{column} contains`                              | A text filter's input                        |
+| `blank`                          | `(Blank)`                                        | An empty value in a filter's checklist       |
+| `clearFilter`                    | `Clear`                                          | Clears one column's filter                   |
+| `noMatches`, `clearFilters`      | `No rows match the filters.`, `Clear filters`    | The state when the filters leave no rows     |
+| `unsaved`, `saving`, `saved`     | `Unsaved`, `Saving`, `Saved`                     | Cell statuses, announced                     |
+| `saveFailed`                     | `Could not save. Check your connection.`         | A cell's error when its `onCommit` throws    |
+| `empty`                          | `No data.`                                       | The empty state, when `emptyState` isn't set |
+| `addRow`                         | `Add row`                                        | The add-row button                           |
 
 Cells and hooks take their own text props: `openLabel` and `detailLabel` on `SheetPrimaryCell`, `placeholder` on editable cells, and `transportErrorMessage` on `useRowChanges`.
 
@@ -621,12 +643,13 @@ Resizing doesn't re-render the component that calls `useSheet`, so widths read w
 
 - **Table semantics:** the sheet is a table to assistive tech. Headers carry `aria-sort`, and the row-number column is named. Loading rows are marked busy, and the placeholder rows are hidden.
 - **Keyboard:**
-  - Tab reaches the sort and filter buttons, resize handles, cells and row actions. Row actions appear on focus as well as hover.
+  - Tab reaches the sort and filter buttons, move grips, resize handles, cells and row actions. Row actions appear on focus as well as hover.
   - A filter button opens its filter with focus inside it. Escape, or Enter in a text filter, closes it and returns focus to the button.
   - Enter or Space opens an editable cell with its value. In the built-in cells, F2 does too, and typing a character opens it with that character instead, replacing the value, as in a spreadsheet.
   - Enter saves, Escape cancels, and both return focus to the cell. Tab saves and moves on to the next cell, so you can type, press Tab and type again.
   - On a focused resize handle, the arrow keys resize the column (Shift for bigger steps), and a double-click resets it.
-- **Screen readers:** editors are named after their column. Saving statuses are announced, and refused values are announced as alerts.
+  - Enter or Space on a move grip opens its menu, and Move left or Move right moves the column one place. Focus stays on the grip.
+- **Screen readers:** editors are named after their column. Saving statuses are announced, refused values are announced as alerts, and a moved column's new position is announced.
 - **Testing:** the playground is scanned with axe in CI, and any violation fails the build.
 
 Not yet supported: moving between cells with the arrow keys (`role="grid"`).
@@ -641,6 +664,7 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 
 - **No virtualisation yet.** Every row is rendered. Hundreds to a few thousand rows are fine; beyond that, render your own body with `@tanstack/react-virtual` through the headless API.
 - **No column pinning,** and no arrow-key navigation between cells.
+- **Columns move one at a time:** a whole group can't be dragged yet.
 - **Text editors only.** The built-in editors are for text; other types need your own cells (see [Your own editable cells](#your-own-editable-cells)).
 - **Two filters:** text, and a checklist of values. A range, such as dates, needs your own control, through TanStack's filter APIs.
 - **TanStack Table v9 only.** Use `@codemancers/sheets` 0.2 with TanStack Table v8.
@@ -664,12 +688,12 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 
 ### `@codemancers/sheets/ui`
 
-| Export                                                                                                                     | What it is                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `Sheet`                                                                                                                    | The grid. Props: [Layout and states](#layout-and-states) and `labels`.                       |
-| `SheetTextCell`, `SheetLinkCell`, `SheetPrimaryCell`, `SheetEditableTextCell`, `SheetActionsCell`                          | The built-in cells.                                                                          |
-| `SheetLabels`, `defaultSheetLabels`                                                                                        | The label type and the English defaults.                                                     |
-| `SheetHeader`, `SheetRow`, `SheetCell`, `SheetRowNumber`, `SheetEmpty`, `SheetLoading`, `SheetAddRow`, `SheetSpacerColumn` | The pieces `Sheet` is built from, for composing your own. They must render inside a `Sheet`. |
+| Export                                                                                                                     | What it is                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Sheet`                                                                                                                    | The grid. Props: [Layout and states](#layout-and-states), [`enableColumnOrdering`](#reordering-columns) and `labels`.                        |
+| `SheetTextCell`, `SheetLinkCell`, `SheetPrimaryCell`, `SheetEditableTextCell`, `SheetActionsCell`                          | The built-in cells.                                                                                                                          |
+| `SheetLabels`, `defaultSheetLabels`                                                                                        | The label type and the English defaults.                                                                                                     |
+| `SheetHeader`, `SheetRow`, `SheetCell`, `SheetRowNumber`, `SheetEmpty`, `SheetLoading`, `SheetAddRow`, `SheetSpacerColumn` | The pieces `Sheet` is built from, for composing your own. They must render inside a `Sheet`. `SheetHeader` takes `enableColumnOrdering` too. |
 
 ### `@codemancers/sheets/styles.css`
 

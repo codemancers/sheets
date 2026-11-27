@@ -12,6 +12,13 @@ export type SheetLabels = {
   resize: (column: string) => string;
   /** Reads out a column's width. */
   width: (pixels: number) => string;
+  /** Names a header's move handle, and the menu it opens. */
+  move: (column: string) => string;
+  /** The move menu's items, which follow the visual direction. */
+  moveLeft: string;
+  moveRight: string;
+  /** Announced after a column moves; `position` counts from 1. */
+  moved: (column: string, position: number, total: number) => string;
   /** Announced on a filtered column's header. */
   filtered: string;
   /** Names a header's filter button, and the filter it opens. */
@@ -43,6 +50,11 @@ export const defaultSheetLabels: SheetLabels = {
   sort: (column) => `Sort ${column}`,
   resize: (column) => `Resize ${column}`,
   width: (pixels) => `${pixels} pixels`,
+  move: (column) => `Move ${column}`,
+  moveLeft: 'Move left',
+  moveRight: 'Move right',
+  moved: (column, position, total) =>
+    `${column} moved to column ${position} of ${total}`,
   filtered: '(filtered)',
   filter: (column) => `Filter ${column}`,
   filterText: (column) => `${column} contains`,
