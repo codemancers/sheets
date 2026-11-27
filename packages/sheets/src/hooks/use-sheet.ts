@@ -118,6 +118,14 @@ function defined<T extends object>(values: T): T {
  * (TanStack skips them when `manualSorting` / `manualFiltering` is set, for
  * server-side data), each column's values and counts for its filter, and
  * live column resizing. Any option the app passes wins.
+ *
+ * `table.state` leaves out `columnSizing` and `columnResizing`, so resizing a
+ * column doesn't re-render the component that calls this: TanStack's advice
+ * for resizing with `columnResizeMode: 'onChange'`. Read them with
+ * `table.atoms.columnSizing.get()`, or subscribe with `Subscribe`. An app
+ * that controls `columnSizing` through `state` still re-renders, with the
+ * sheet, on every resize: to own the widths, pass an atom in `atoms`, as
+ * TanStack's column sizing guide recommends.
  */
 export function useSheet<TData extends RowData>({
   cellStatus,
@@ -127,13 +135,23 @@ export function useSheet<TData extends RowData>({
   // Cells report validation and save failures through this, so every sheet
   // has one, not only those that save per row.
   const ownCellStatus = useCellStatus();
-  const table = useTable<SheetFeatures, TData>({
-    enableColumnResizing: true,
-    columnResizeMode: 'onChange',
-    ...defined(options),
-    ...(options.state ? { state: defined(options.state) } : {}),
-    features: sheetFeatures,
-  });
+  const table = useTable(
+    {
+      enableColumnResizing: true,
+      columnResizeMode: 'onChange',
+      ...defined(options),
+      ...(options.state ? { state: defined(options.state) } : {}),
+      features: sheetFeatures,
+    },
+    (state) => ({
+      columnFilters: state.columnFilters,
+      columnOrder: state.columnOrder,
+      columnVisibility: state.columnVisibility,
+      globalFilter: state.globalFilter,
+      rowPinning: state.rowPinning,
+      sorting: state.sorting,
+    }),
+  );
 
   return { table, cellStatus: cellStatus ?? ownCellStatus, rowChanges };
 }

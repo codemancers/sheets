@@ -60,16 +60,18 @@ flowchart TD
   Sheet --> Body["Body rowgroup"]
   Body -->|isLoading| Loading["loadingState, or SheetLoading"]
   Body -->|no rows| Empty["SheetEmpty<br/>or, when filters hide every row, a way to clear them"]
-  Body -->|rows| Rows["SheetBody, memoised"]
-  Rows --> Row["SheetRow per row"]
+  Body -->|rows| Row["SheetRow per row"]
   Row --> Cell["SheetCell per visible cell<br/>provides the cell context and draws the status"]
   Cell --> Content["SheetCellContent<br/>calls the column's cell function"]
   Sheet -->|onAddRow| AddRow["SheetAddRow"]
 ```
 
 - **One grid for every row.** The root sets `--sheet-columns` to `40px`, then each visible leaf column's size in pixels, then `1fr`: the row-number column, the data columns, and a spacer that fills the rest. Header, body, empty, loading and add-row rows all lay out on `var(--sheet-columns)` (`src/ui/grid.ts`), so the columns line up without a `<table>`. A group header spans its leaf columns with `grid-column: span n`.
-- **Pinned rows.** The body renders TanStack's pinned top rows, then the rest, then the pinned bottom rows, so a pinned row stays put whatever the sort. Apps pin a new row being filled in to the bottom. TanStack memoises the three lists, so the combined one keeps its identity for `SheetBody`'s memo.
-- **Resizing re-renders little.** While a column is dragged, only the header and the root's variable change. `SheetBody` skips re-rendering while `columnResizing.isResizingColumn` is set and its other props are unchanged. This is TanStack's advice for `columnResizeMode: 'onChange'`. It depends on `useCellStatus` and `useRowChanges` returning memoised objects.
+- **Pinned rows.** The body renders TanStack's pinned top rows, then the rest, then the pinned bottom rows, so a pinned row stays put whatever the sort. Apps pin a new row being filled in to the bottom.
+- **Resizing re-renders only the handle.** This is TanStack v9's advice for `columnResizeMode: 'onChange'`:
+  - `useSheet` passes `useTable` a selector that leaves out `columnSizing` and `columnResizing`, so a drag doesn't re-render the component that calls it, or anything below. An app that controls `columnSizing` through `state` re-renders anyway, and the sheet with it.
+  - `Sheet` subscribes to `table.atoms.columnSizing` in a layout effect and writes the new tracks to `--sheet-columns`. It sets the same value when it renders, for server-rendered HTML and for columns being hidden, shown or moved.
+  - Each resize handle sits in a `Subscribe` island, which re-renders when its column's width changes and when its drag starts or ends.
 - **Cells.** `SheetCellContent` calls the column's `cell` function itself, without `flexRender`, so a column array that's rebuilt on every render doesn't remount the cells. A string or number result is wrapped in `SheetTextCell` for its padding. Headers do use `flexRender`.
 - **Headers.** The sort button calls TanStack's toggle handler, and shows on hover or keyboard focus. Leaf columns get a resize handle: a focusable separator that takes the mouse, touch, the arrow keys (10 px a step, 50 px with Shift, flipped for `columnResizeDirection: 'rtl'`), and a double-click to reset the width.
 - **Filters.** A column whose `filterFn` is `textFilter` or `valuesFilter` gets a filter button (`SheetColumnFilter`). It opens a native popover, which sits in the top layer above the scroll container, placed under the button with CSS anchor positioning. The controls mount only while it's open: a text input, or a checklist built from TanStack's faceted values (`getFacetedUniqueValues`, which counts each value with the other columns' filters applied). Both write to TanStack's `columnFilters` through `column.setFilterValue`, and TanStack's filtered row model does the rest. The body shows "no matches" and a clear button when the column filters leave no rows.

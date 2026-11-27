@@ -2,16 +2,13 @@
 
 import { cx } from './cx.js';
 import {
-  memo,
-  useMemo,
+  useLayoutEffect,
   useRef,
   type CSSProperties,
   type ReactNode,
 } from 'react';
-import type { Row, RowData } from '@tanstack/react-table';
+import type { RowData, Table } from '@tanstack/react-table';
 import type { SheetFeatures, SheetInstance } from '../hooks/use-sheet.js';
-import type { CellStatusState } from '../hooks/use-cell-status.js';
-import type { RowChangesState } from '../hooks/use-row-changes.js';
 import { SheetAddRow } from './sheet-add-row.js';
 import { SheetEmpty } from './sheet-empty.js';
 import { SheetLoading } from './sheet-loading.js';
@@ -35,6 +32,21 @@ function sameLabels(a?: Partial<SheetLabels>, b?: Partial<SheetLabels>) {
     keys.length === Object.keys(b).length &&
     keys.every((key) => Object.is(a[key], b[key]))
   );
+}
+
+/**
+ * The row-number column, each visible leaf column's width, then a spacer that
+ * fills the rest. Leaf columns, so grouped headers span their columns rather
+ * than add tracks.
+ */
+function columnTracks<TData extends RowData>(
+  table: Table<SheetFeatures, TData>,
+) {
+  const widths = table
+    .getVisibleLeafColumns()
+    .map((column) => `${column.getSize()}px`)
+    .join(' ');
+  return `${ROW_NUMBER_WIDTH}px ${widths} 1fr`;
 }
 
 export type SheetProps<TData extends RowData> = {
@@ -63,61 +75,6 @@ export type SheetProps<TData extends RowData> = {
   labels?: Partial<SheetLabels>;
 };
 
-type SheetBodyProps<TData extends RowData> = {
-  rows: Row<SheetFeatures, TData>[];
-  rowHeight: number;
-  highlightedRowId?: string;
-  openRowId?: string | null;
-  cellStatus?: CellStatusState;
-  rowChanges?: RowChangesState;
-  /** True while a column is being dragged wider or narrower. */
-  resizing: boolean;
-};
-
-function SheetRows<TData extends RowData>({
-  rows,
-  rowHeight,
-  highlightedRowId,
-  openRowId,
-  cellStatus,
-  rowChanges,
-}: SheetBodyProps<TData>) {
-  return (
-    <>
-      {rows.map((row, idx) => (
-        <SheetRow
-          key={row.id}
-          row={row}
-          rowIndex={idx}
-          rowHeight={rowHeight}
-          highlight={highlightedRowId === row.id}
-          open={openRowId === row.id}
-          cellStatus={cellStatus}
-          rowChanges={rowChanges}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * While a column is dragged, only the header and the root's --sheet-columns
- * change, so the rows skip re-rendering: TanStack's advice for live resizing.
- * At any other time they re-render as usual, since visibility or order
- * changes reach them through the same row objects.
- */
-const SheetBody = memo(
-  SheetRows,
-  (prev, next) =>
-    next.resizing &&
-    prev.rows === next.rows &&
-    prev.rowHeight === next.rowHeight &&
-    prev.highlightedRowId === next.highlightedRowId &&
-    prev.openRowId === next.openRowId &&
-    prev.cellStatus === next.cellStatus &&
-    prev.rowChanges === next.rowChanges,
-) as typeof SheetRows;
-
 export function Sheet<TData extends RowData>({
   instance,
   className,
@@ -133,9 +90,9 @@ export function Sheet<TData extends RowData>({
 }: SheetProps<TData>) {
   const { table, cellStatus, rowChanges } = instance;
   // Apps usually pass labels inline, a new object on every render. Keep the
-  // merged labels while their values are the same, or the context changes and
-  // everything that reads it re-renders, every row's number cell included,
-  // on each frame of a column drag.
+  // merged labels while their values are the same, so the context changes
+  // only when the text does, and a memoised component that reads it stays
+  // still.
   const labelsRef = useRef<{
     given?: Partial<SheetLabels>;
     merged: SheetLabels;
@@ -150,30 +107,37 @@ export function Sheet<TData extends RowData>({
   }
   const text = labelsRef.current.merged;
 
-  // Leaf columns, so grouped headers span their columns rather than add tracks.
-  const leafColumns = table.getVisibleLeafColumns();
-  const colTracks = leafColumns
-    .map((column) => `${column.getSize()}px`)
-    .join(' ');
-  const columns = {
-    '--sheet-columns': `${ROW_NUMBER_WIDTH}px ${colTracks} 1fr`,
-  } as CSSProperties;
+  // TanStack's advice for resizing: a drag changes no state the sheet renders
+  // from (see useSheet), so the new widths go straight to the root's
+  // --sheet-columns, which every row lays out on. The style below sets the
+  // same value when the sheet renders, for server-rendered HTML and for
+  // columns being hidden, shown or moved.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const writeColumnTracks = () =>
+      rootRef.current?.style.setProperty(
+        '--sheet-columns',
+        columnTracks(table),
+      );
+    writeColumnTracks();
+    const { unsubscribe } =
+      table.atoms.columnSizing.subscribe(writeColumnTracks);
+    return () => unsubscribe();
+  }, [table]);
+  const columns = { '--sheet-columns': columnTracks(table) } as CSSProperties;
 
   // Rows pinned with TanStack's row pinning, such as a new row being filled
-  // in, stay at the top or bottom whatever the sort. TanStack memoises all
-  // three lists, so the combined one keeps its identity for SheetBody's memo.
+  // in, stay at the top or bottom whatever the sort.
   const top = table.getTopRows();
   const center = table.getCenterRows();
   const bottom = table.getBottomRows();
-  const rows = useMemo(
-    () =>
-      top.length || bottom.length ? [...top, ...center, ...bottom] : center,
-    [top, center, bottom],
-  );
+  const rows =
+    top.length || bottom.length ? [...top, ...center, ...bottom] : center;
 
   return (
     <SheetLabelsProvider value={text}>
       <div
+        ref={rootRef}
         role="table"
         style={columns}
         className={cx(
@@ -190,7 +154,7 @@ export function Sheet<TData extends RowData>({
           {isLoading ? (
             (loadingState ?? (
               <SheetLoading
-                columnCount={leafColumns.length}
+                columnCount={table.getVisibleLeafColumns().length}
                 rowHeight={rowHeight}
               />
             ))
@@ -214,15 +178,18 @@ export function Sheet<TData extends RowData>({
               )}
             </SheetEmpty>
           ) : (
-            <SheetBody
-              rows={rows}
-              rowHeight={rowHeight}
-              highlightedRowId={highlightedRowId}
-              openRowId={openRowId}
-              cellStatus={cellStatus}
-              rowChanges={rowChanges}
-              resizing={Boolean(table.state.columnResizing.isResizingColumn)}
-            />
+            rows.map((row, idx) => (
+              <SheetRow
+                key={row.id}
+                row={row}
+                rowIndex={idx}
+                rowHeight={rowHeight}
+                highlight={highlightedRowId === row.id}
+                open={openRowId === row.id}
+                cellStatus={cellStatus}
+                rowChanges={rowChanges}
+              />
+            ))
           )}
         </div>
         {!isLoading && onAddRow && (

@@ -369,6 +369,10 @@ function PriorityCell({ value }: { value: number }) {
 
 Column widths come from `size` (TanStack's default is 150px). After the last column, an empty filler column takes up the remaining width. `rowHeight` sets the minimum row height (default 32px).
 
+Resizing a column re-renders only its resize handle, not your component or the rows, as TanStack advises for live resizing. So `table.state` leaves out the widths (`columnSizing`) and the drag in progress (`columnResizing`). Read the widths with `table.atoms.columnSizing.get()`, or re-render with them inside TanStack's [`Subscribe`](https://tanstack.com/table/latest/docs/framework/react/guide/table-state#optimizing-re-renders-with-selectors-and-tablesubscribe).
+
+If you control `columnSizing` through `state` and `onColumnSizingChange`, every resize still re-renders your component and the sheet. To own the widths, for example to save them, pass an external atom in `atoms` instead, as TanStack's [column sizing guide](https://tanstack.com/table/latest/docs/framework/react/guide/column-sizing) recommends.
+
 | Prop                     | What it does                                                                                                                              |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `isLoading`              | Shows placeholder rows inside the same frame and marks the rows busy for assistive tech. `loadingState` replaces the placeholders.        |
@@ -441,7 +445,7 @@ function TaskSheet({ tasks }: { tasks: Task[] }) {
 
 - **Saving:** `onCommit` creates the record. Return `{ error }`, or throw, and the error shows on the new row with the typed text kept for a retry. Returning the result, as above, rather than returning only on failure, also passes TypeScript's `noImplicitReturns`.
 - **Discarding:** `onCancel` runs on Escape, and when the editor closes with nothing typed (Enter, Tab or clicking away), so an empty new row goes away.
-- **Staying at the bottom:** `state.rowPinning` pins the new row with TanStack's row pinning, so a sort can't move it. Pin it only while it's in `data`, because TanStack throws for a pinned id it can't find. Keep the pinning objects constant, as above, so resizing a column doesn't re-render every row.
+- **Staying at the bottom:** `state.rowPinning` pins the new row with TanStack's row pinning, so a sort can't move it. Pin it only while it's in `data`, because TanStack throws for a pinned id it can't find.
 - **A fixed id:** give the new row the same id every time, such as `'new'`. Its error and typed text are kept against that id.
 - **`value=""`:** a new record has no saved value. Don't copy the typed text into `value`: an unchanged retry would then look like nothing to save, and discard the row.
 
@@ -609,6 +613,8 @@ const { table } = useSheet({ columns, data, getRowId: (task) => task.id });
 </table>;
 ```
 
+Resizing doesn't re-render the component that calls `useSheet`, so widths read while rendering, such as `header.getSize()`, don't follow a drag. Put them in CSS variables, as `<Sheet>` does, or read them inside `Subscribe`: TanStack's [performant column resizing example](https://tanstack.com/table/latest/docs/framework/react/examples/column-resizing-performant) does both.
+
 `useCellStatus`, `useRowChanges` and `useInlineEdit` don't depend on the components. Wrap a cell in `SheetCellProvider` to give it the same context `<Sheet>` provides.
 
 ## Accessibility
@@ -646,7 +652,7 @@ Not yet supported: moving between cells with the arrow keys (`role="grid"`).
 
 | Export                                     | What it is                                                                                                                                                                                                                                                                           |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `useSheet(options)`                        | `useTable` with the sheet's feature set, plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own.                                                                                               |
+| `useSheet(options)`                        | `useTable` with the sheet's feature set, plus `cellStatus` and `rowChanges`. Returns `{ table, cellStatus, rowChanges }`, where `cellStatus` is the one you passed or the sheet's own. `table.state` leaves out `columnSizing` and `columnResizing`.                                 |
 | `useCellStatus()`                          | Per-cell outcomes: `setCellSaved`, `rejectCellValue`, `rejectFieldErrors`, `clearCellStatus`, `abandonCellValueChange`, `setCellDirty`, `setCellSaving`, `statuses`, `rejectedCellValue`.                                                                                            |
 | `useRowChanges(options)`                   | The per-row save buffer. Options: `onSubmitRow`, `cellStatus`, `flush`, `transportErrorMessage`. Returns `stageCellValue`, `discardCellValue`, `stagedCellValue`, `hasStagedChanges`, `flushAll`.                                                                                    |
 | `useInlineEdit(options)`                   | Edit-in-place state for a text editor: `isEditing`, `beginEdit(draft?)`, `commit`, `cancel`, `inputProps`, `triggerRef`. Calls `onCancel` on Escape, and when an edit ends unchanged.                                                                                                |
