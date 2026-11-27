@@ -180,6 +180,21 @@ describe('moving columns', () => {
       expect(headers()).toEqual(['G', 'C', 'A', 'B']);
     });
 
+    it('starts no drag while a column is resized', () => {
+      render(<Grid />);
+      fireEvent.mouseDown(screen.getByRole('separator', { name: 'Resize A' }), {
+        clientX: 100,
+      });
+
+      const started = fireEvent.dragStart(
+        screen.getByRole('button', { name: 'Move A' }),
+        { dataTransfer: transfer() },
+      );
+
+      expect(started).toBe(false);
+      fireEvent.mouseUp(document, { clientX: 100 });
+    });
+
     it('refuses a column dragged from another sheet', () => {
       render(
         <>

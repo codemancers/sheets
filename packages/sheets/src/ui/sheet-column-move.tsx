@@ -111,6 +111,13 @@ export function SheetColumnMove<TData extends RowData>({
         aria-label={name}
         style={{ anchorName: anchor }}
         onDragStart={(event) => {
+          // Widening a column slides this grip under the point where its
+          // resize began, and Chrome and Safari then start dragging the grip,
+          // which stops the resize. No column moves while one is resized.
+          if (table.atoms.columnResizing.get().isResizingColumn) {
+            event.preventDefault();
+            return;
+          }
           dragged.current = column.id;
           if (open) panel.current?.hidePopover();
           event.dataTransfer.effectAllowed = 'move';
