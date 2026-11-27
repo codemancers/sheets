@@ -481,6 +481,30 @@ test.describe('reordering columns', () => {
     });
   });
 
+  // Widening a column slides its grip under the pointer, and Chrome then
+  // started dragging the grip instead, which stopped the resize.
+  test('resizes a movable column without moving it', async ({ page }) => {
+    const separator = demo(page, sorting).getByRole('separator', {
+      name: 'Resize Status',
+    });
+    const box = await separator.boundingBox();
+    const x = (box?.x ?? 0) + (box?.width ?? 0) / 2;
+    const y = (box?.y ?? 0) + (box?.height ?? 0) / 2;
+
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y, { steps: 6 });
+    await page.mouse.up();
+
+    await expect(separator).toHaveAttribute('aria-valuenow', '210');
+    expect(await headers(page, sorting)).toEqual([
+      'Title',
+      'Status',
+      'Owner',
+      'Due',
+    ]);
+  });
+
   test('gives the handle a target of at least 24 pixels', async ({ page }) => {
     const header = demo(page, sorting).getByRole('columnheader', {
       name: /Owner/,
